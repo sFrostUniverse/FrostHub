@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "410532748747",
+    "project_id": "frosthub-6ca1c",
+    "storage_bucket": "frosthub-6ca1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410532748747:android:f9c89e468d0aab54cf6a4e",
+        "android_client_info": {
+          "package_name": "com.frosthub.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "410532748747-2dhgk5ckf6gc40soujsqr77ga9k8pj4f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.frosthub.app",
+            "certificate_hash": "f71708d9c06d340d23999ecc7b2eab5b5635faf9"
+          }
+        },
+        {
+          "client_id": "410532748747-lfh2ibl8ei7tcicg0tavrbfo64vpth86.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWJAMlH_-6FpNesSMzBKNIIsJ-vXJst3w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "410532748747-lfh2ibl8ei7tcicg0tavrbfo64vpth86.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "410532748747-1skso3t41f7feji2fg21f5meqlfkp6aq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.frosthub"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

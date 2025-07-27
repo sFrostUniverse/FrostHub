@@ -40,8 +40,21 @@ class _TimetableScreenState extends State<TimetableScreen> {
         .doc(user.uid)
         .get();
 
-    final groupId = userDoc['groupId'];
-    _role = userDoc['role'] ?? 'student';
+    final data = userDoc.data();
+    if (data == null || !data.containsKey('groupId')) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are not part of a group yet.')),
+        );
+      }
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final groupId = data['groupId'];
+    _role = data['role'] ?? 'student';
 
     final snap = await FirebaseFirestore.instance
         .collection('groups')

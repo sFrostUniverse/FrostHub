@@ -33,8 +33,21 @@ class _NotesScreenState extends State<NotesScreen> {
         .doc(user.uid)
         .get();
 
-    _role = userDoc['role'] ?? 'student';
-    final groupId = userDoc['groupId'];
+    final data = userDoc.data();
+    if (data == null || !data.containsKey('groupId')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are not part of a group yet.')),
+        );
+      }
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _role = data['role'] ?? 'student';
+    final groupId = data['groupId'];
 
     final snap = await FirebaseFirestore.instance
         .collection('groups')
@@ -44,9 +57,9 @@ class _NotesScreenState extends State<NotesScreen> {
         .get();
 
     final noteList = snap.docs.map((doc) {
-      final data = doc.data();
-      data['id'] = doc.id;
-      return data;
+      final noteData = doc.data();
+      noteData['id'] = doc.id;
+      return noteData;
     }).toList();
 
     setState(() {

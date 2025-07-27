@@ -98,11 +98,25 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   Future<void> _deleteAnnouncement(String id) async {
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .doc(user!.uid)
+        .doc(user.uid)
         .get();
-    final groupId = userDoc['groupId'];
+
+    final data = userDoc.data();
+    if (data == null || !data.containsKey('groupId')) {
+      // Gracefully handle if groupId is missing
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You are not in a group yet.')),
+        );
+      }
+      return;
+    }
+
+    final groupId = data['groupId'];
 
     await FirebaseFirestore.instance
         .collection('groups')
@@ -111,7 +125,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         .doc(id)
         .delete();
 
-    _loadAnnouncements();
+    if (mounted) {
+      _loadAnnouncements(); // Refresh the list
+    }
   }
 
   @override

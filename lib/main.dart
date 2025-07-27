@@ -24,14 +24,19 @@ void main() async {
   if (auth.isSignInWithEmailLink(emailLink)) {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('email');
+
     if (email != null) {
-      await AuthService.completeEmailLinkSignIn(email, emailLink);
-      runApp(const FrostHubApp());
-      return;
+      try {
+        await AuthService.completeEmailLinkSignIn(email, emailLink);
+      } catch (e) {
+        debugPrint("Email link sign-in failed: $e");
+      }
+    } else {
+      debugPrint("No email cached for link sign-in.");
     }
   }
 
-  runApp(const FrostHubApp());
+  runApp(const FrostHubApp()); // ✅ Always call runApp
 }
 
 class FrostHubApp extends StatelessWidget {
@@ -44,7 +49,7 @@ class FrostHubApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF4F8FB), // Frosty white-blue
+        scaffoldBackgroundColor: const Color(0xFFF4F8FB),
         useMaterial3: true,
         textTheme: GoogleFonts.poppinsTextTheme(),
         appBarTheme: const AppBarTheme(
@@ -60,7 +65,6 @@ class FrostHubApp extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(16)),
           ),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.indigo[600],
@@ -93,8 +97,34 @@ class FrostHubApp extends StatelessWidget {
   }
 }
 
-class LandingScreen extends StatelessWidget {
+class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
+
+  @override
+  State<LandingScreen> createState() => _LandingScreenState();
+}
+
+class _LandingScreenState extends State<LandingScreen> {
+  String? _cachedName;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedData();
+  }
+
+  Future<void> _loadCachedData() async {
+    final cachedData = await AuthService.getCachedUserData();
+    setState(() {
+      _cachedName = cachedData['name'];
+      _isLoading = false;
+    });
+  }
+
+  void _continueAsUser() {
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  }
 
   Future<Widget> _getHomeScreen() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -105,42 +135,82 @@ class LandingScreen extends StatelessWidget {
         .doc(user.uid)
         .get();
 
-    if (!doc.exists) {
-      return const OnboardingScreen(); // New user → enter name + role
-    }
+    if (!doc.exists) return const OnboardingScreen();
 
     final data = doc.data();
     final role = data?['role'];
     final groupId = data?['groupId'];
 
-    if (role == 'admin') {
-      return const DashboardScreen(); // Admin always goes to dashboard
-    }
-
+    if (role == 'admin') return const DashboardScreen();
     if (role == 'student') {
       if (groupId == null || groupId.isEmpty) {
-        return const JoinGroupScreen(); // Student but no group
+        return const JoinGroupScreen();
       } else {
-        return const DashboardScreen(); // Student with group
+        return const DashboardScreen();
       }
     }
 
-    // Fallback in case of missing or invalid role
     return const OnboardingScreen();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Widget>(
-      future: _getHomeScreen(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return _cachedName != null && FirebaseAuth.instance.currentUser == null
+        ? Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Welcome Back!",
+                      style:
+                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Continue as $_cachedName",
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _continueAsUser,
+                      child: const Text("Continue"),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        AuthService.signOut();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const OnboardingScreen()),
+                        );
+                      },
+                      child: const Text("Not you? Switch account"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        : FutureBuilder<Widget>(
+            future: _getHomeScreen(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return snapshot.data ?? const OnboardingScreen();
+            },
           );
-        }
-        return snapshot.data ?? const OnboardingScreen();
-      },
-    );
   }
 }

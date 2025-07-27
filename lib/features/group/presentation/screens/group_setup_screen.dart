@@ -44,9 +44,24 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
           .doc(user.uid)
           .update({'groupId': groupId});
 
+      // Force-refresh the user data before navigating
+      final updatedDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final updatedGroupId = updatedDoc.data()?['groupId'];
+      if (updatedGroupId != null && updatedGroupId.isNotEmpty) {
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/dashboard', (route) => false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Group creation incomplete. Try again.')),
+        );
+      }
+
       // ✅ Go to dashboard and clear previous stack
-      Navigator.pushNamedAndRemoveUntil(
-          context, '/dashboard', (route) => false);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error creating group: $e')),

@@ -37,6 +37,13 @@ class GroupInfoScreen extends StatelessWidget {
       };
     }).toList();
 
+    // Sort: Admin first, then by name
+    members.sort((a, b) {
+      if (a['role'] == 'admin') return -1;
+      if (b['role'] == 'admin') return 1;
+      return a['name'].toLowerCase().compareTo(b['name'].toLowerCase());
+    });
+
     return {
       'role': role,
       'groupCode': groupCode,
@@ -70,31 +77,50 @@ class GroupInfoScreen extends StatelessWidget {
               if (isAdmin) ...[
                 const Text("Group Code",
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(groupCode ?? 'N/A'),
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: groupCode ?? ''));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Group code copied')),
-                        );
-                      },
-                    )
-                  ],
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(groupCode ?? 'N/A',
+                          style: const TextStyle(fontSize: 16)),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: groupCode ?? ''));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Group code copied')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
               ],
               const Text("Members",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              ...members.map((member) => ListTile(
+              ...members.map((member) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: ListTile(
                     leading: const Icon(Icons.person),
                     title: Text(member['name']),
                     subtitle: Text('${member['email']} • ${member['role']}'),
-                  )),
+                    trailing: member['role'] == 'admin'
+                        ? const Icon(Icons.star, color: Colors.amber)
+                        : null,
+                  ),
+                );
+              }),
             ],
           );
         },

@@ -244,6 +244,11 @@ class _NotesScreenState extends State<NotesScreen> {
               onTap: () => Navigator.pushNamed(context, '/dashboard'),
             ),
             ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Group Info'),
+              onTap: () => Navigator.pushNamed(context, '/groupInfo'),
+            ),
+            ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text('Timetable'),
               onTap: () => Navigator.pushNamed(context, '/timetable'),

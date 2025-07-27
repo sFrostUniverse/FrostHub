@@ -283,6 +283,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () => Navigator.pop(context),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.group),
+                  title: const Text('Group Info'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/groupInfo');
+                  },
+                ),
+
+                ListTile(
                   leading: const Icon(Icons.schedule),
                   title: const Text('Timetable'),
                   onTap: () {

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -41,6 +42,13 @@ class AuthService {
         'role': 'student',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      await cacheUserData(name: 'Student', email: email, role: 'student');
+    } else {
+      final data = doc.data();
+      final name = data?['name'] ?? 'Student';
+      final role = data?['role'] ?? 'student';
+      await cacheUserData(name: name, email: email, role: role);
     }
   }
 
@@ -66,12 +74,39 @@ class AuthService {
       'role': 'admin',
       'createdAt': FieldValue.serverTimestamp(),
     });
+
+    await cacheUserData(name: name, email: user.email ?? '', role: 'admin');
   }
 
+  /// Sign out user and clear local data
   static Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _auth.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clears cached name/email/role
   }
 
   static User? get currentUser => _auth.currentUser;
+
+  /// ✅ Cache user locally for one-tap continue
+  static Future<void> cacheUserData({
+    required String name,
+    required String email,
+    required String role,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', name);
+    await prefs.setString('email', email);
+    await prefs.setString('role', role);
+  }
+
+  /// ✅ Load cached user info
+  static Future<Map<String, String?>> getCachedUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'name': prefs.getString('name'),
+      'email': prefs.getString('email'),
+      'role': prefs.getString('role'),
+    };
+  }
 }

@@ -6,13 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'features/auth/presentation/screens/google_signin_screen.dart';
 import 'features/group/presentation/screens/group_choice_screen.dart';
-import 'package:frosthub/features/group/presentation/screens/group_info_screen.dart';
+import 'features/group/presentation/screens/group_info_screen.dart';
 import 'features/main/presentation/screens/dashboard_screen.dart';
-import 'package:frosthub/features/group/presentation/screens/join_group_screen.dart';
+import 'features/group/presentation/screens/join_group_screen.dart';
 
 import 'features/timetable/presentation/screens/timetable_screen.dart';
 import 'features/announcements/presentation/screens/announcements_screen.dart';
 import 'features/notes/presentation/screens/notes_folder_screen.dart';
+
+import 'package:provider/provider.dart';
+import 'package:frosthub/theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +31,6 @@ void main() async {
 
     final snapshot = await userDocRef.get();
     if (!snapshot.exists) {
-      // User doc doesn't exist – create it
       await userDocRef.set({
         'name': user.displayName ?? '',
         'email': user.email,
@@ -61,22 +63,30 @@ class FrostHubApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FrostHub',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      debugShowCheckedModeBanner: false,
-      home: startScreen,
-      routes: {
-        '/': (_) => const GoogleSignInScreen(),
-        '/timetable': (_) => const TimetableScreen(),
-        '/announcements': (_) => const AnnouncementsScreen(),
-        '/notes': (_) => const NotesFolderScreen(
-              parentId: null,
-              title: 'Notes',
-            ),
-        '/group-info': (_) => const GroupInfoScreen(),
-        '/join-group': (_) => const JoinGroupScreen(), // ✅ Add this line
-      },
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            themeMode: themeProvider.themeMode,
+            home: startScreen,
+            routes: {
+              '/': (_) => const GoogleSignInScreen(),
+              '/timetable': (_) => const TimetableScreen(),
+              '/announcements': (_) => const AnnouncementsScreen(),
+              '/notes': (_) => const NotesFolderScreen(
+                    parentId: null,
+                    title: 'Notes',
+                  ),
+              '/group-info': (_) => const GroupInfoScreen(),
+              '/join-group': (_) => const JoinGroupScreen(),
+            },
+          );
+        },
+      ),
     );
   }
 }

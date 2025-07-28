@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:frosthub/features/group/presentation/screens/group_info_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frosthub/features/auth/presentation/screens/google_signin_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -92,9 +94,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             const Divider(),
-            const ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () async {
+                // Sign out from Firebase
+                await FirebaseAuth.instance.signOut();
+
+                // Optional: Clear SharedPreferences
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+
+                // Navigate to sign-in screen
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const GoogleSignInScreen()),
+                    (route) => false,
+                  );
+                }
+              },
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
@@ -12,104 +13,30 @@ class TimetableScreen extends StatefulWidget {
 class _TimetableScreenState extends State<TimetableScreen> {
   String? _groupId;
   bool isAdmin = false;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserDetails();
+    _loadUserData();
   }
 
-  Future<void> _fetchUserDetails() async {
+  Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
+    final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .get();
-    final data = doc.data();
+
+    final data = userDoc.data();
     if (data == null) return;
 
     setState(() {
       _groupId = data['groupId'];
-      isAdmin = data['role'] == 'admin';
+      _role = data['role'];
     });
-  }
-
-  void _showAddTimetableDialog() {
-    final subjectController = TextEditingController();
-    final teacherController = TextEditingController();
-    final timeController = TextEditingController();
-    String selectedDay = 'Monday';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Class'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedDay,
-                items: [
-                  'Monday',
-                  'Tuesday',
-                  'Wednesday',
-                  'Thursday',
-                  'Friday',
-                  'Saturday'
-                ]
-                    .map(
-                        (day) => DropdownMenuItem(value: day, child: Text(day)))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) selectedDay = value;
-                },
-              ),
-              TextField(
-                  controller: subjectController,
-                  decoration: const InputDecoration(labelText: 'Subject')),
-              TextField(
-                  controller: teacherController,
-                  decoration: const InputDecoration(labelText: 'Teacher')),
-              TextField(
-                  controller: timeController,
-                  decoration: const InputDecoration(labelText: 'Time')),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                final subject = subjectController.text.trim();
-                final teacher = teacherController.text.trim();
-                final time = timeController.text.trim();
-
-                if (_groupId == null || subject.isEmpty || time.isEmpty) return;
-
-                await FirebaseFirestore.instance
-                    .collection('groups')
-                    .doc(_groupId)
-                    .collection('timetable')
-                    .add({
-                  'day': selectedDay,
-                  'subject': subject,
-                  'teacher': teacher,
-                  'time': time,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -174,10 +101,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
           },
         ),
       ),
-      floatingActionButton: isAdmin
+      floatingActionButton: _role == 'admin' && _groupId != null
           ? FloatingActionButton(
-              onPressed: _showAddTimetableDialog,
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => AddTimetableModal(groupId: _groupId!),
+                );
+              },
               child: const Icon(Icons.add),
+              tooltip: 'Add Timetable Entry',
             )
           : null,
     );

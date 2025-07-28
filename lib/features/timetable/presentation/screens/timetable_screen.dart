@@ -12,7 +12,6 @@ class TimetableScreen extends StatefulWidget {
 
 class _TimetableScreenState extends State<TimetableScreen> {
   String? _groupId;
-  bool isAdmin = false;
   String? _role;
 
   @override
@@ -55,7 +54,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               .doc(_groupId)
               .collection('timetable')
               .orderBy('day')
-              .orderBy('time')
+              .orderBy('startTime') // ✅ New field you're storing
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -82,15 +81,21 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    Text(day,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      day,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                     ...classes.map((classDoc) {
+                      final subject = classDoc['subject'] ?? 'Unknown';
+                      final teacher = classDoc['teacher'] ?? '';
+                      final start = classDoc['startTime'] ?? '';
+                      final end = classDoc['endTime'] ?? '';
+
                       return Card(
                         child: ListTile(
-                          title: Text(classDoc['subject']),
-                          subtitle: Text(
-                              '${classDoc['teacher']} • ${classDoc['time']}'),
+                          title: Text(subject),
+                          subtitle: Text('$teacher • $start - $end'),
                         ),
                       );
                     }),

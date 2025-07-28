@@ -119,6 +119,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/settings');
+              },
+            ),
           ],
         ),
       ),

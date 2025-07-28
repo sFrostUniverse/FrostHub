@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:frosthub/features/group/presentation/screens/group_info_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frosthub/features/auth/presentation/screens/google_signin_screen.dart';
+import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String? _groupId;
+  String? _role;
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     setState(() {
       _groupId = data['groupId'];
+      _role = data['role'];
     });
   }
 
@@ -224,6 +227,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+      floatingActionButton: _role == 'admin' && _groupId != null
+          ? FloatingActionButton(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => AddTimetableModal(groupId: _groupId!),
+                );
+              },
+              child: const Icon(Icons.add),
+              tooltip: 'Add Timetable Entry',
+            )
+          : null,
     );
   }
 

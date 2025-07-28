@@ -8,6 +8,7 @@ import 'features/auth/presentation/screens/google_signin_screen.dart';
 import 'features/group/presentation/screens/group_choice_screen.dart';
 import 'package:frosthub/features/group/presentation/screens/group_info_screen.dart';
 import 'features/main/presentation/screens/dashboard_screen.dart';
+import 'package:frosthub/features/group/presentation/screens/join_group_screen.dart';
 
 import 'features/timetable/presentation/screens/timetable_screen.dart';
 import 'features/announcements/presentation/screens/announcements_screen.dart';
@@ -74,6 +75,7 @@ class FrostHubApp extends StatelessWidget {
               title: 'Notes',
             ),
         '/group-info': (_) => const GroupInfoScreen(),
+        '/join-group': (_) => const JoinGroupScreen(), // ✅ Add this line
       },
     );
   }

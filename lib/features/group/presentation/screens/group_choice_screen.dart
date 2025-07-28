@@ -32,7 +32,7 @@ class GroupChoiceScreen extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // TODO: Implement join group screen
+                Navigator.pushNamed(context, '/join-group');
               },
               child: const Text('Join a Group'),
             ),

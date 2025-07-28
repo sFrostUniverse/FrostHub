@@ -207,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           } else if (start.hour > now.hour ||
                               (start.hour == now.hour &&
                                   start.minute > now.minute)) {
-                            if (upcoming == null) upcoming = data;
+                            upcoming ??= data;
                           }
                         }
                       }

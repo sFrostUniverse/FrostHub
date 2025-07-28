@@ -107,7 +107,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_groupId == null) {
+    final groupId = _groupId;
+
+    if (groupId == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Group Info')),
         body: const Center(child: CircularProgressIndicator()),
@@ -136,7 +138,21 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             : null,
       ),
       body: StreamBuilder<List<QueryDocumentSnapshot>>(
-        stream: getSortedGroupMembers(),
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('groupId', isEqualTo: groupId) // ✅ only runs when ready
+            .snapshots()
+            .map((snapshot) {
+          final docs = snapshot.docs;
+          docs.sort((a, b) {
+            final roleA = a['role'];
+            final roleB = b['role'];
+            if (roleA == 'admin' && roleB != 'admin') return -1;
+            if (roleA != 'admin' && roleB == 'admin') return 1;
+            return 0;
+          });
+          return docs;
+        }),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());

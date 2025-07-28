@@ -131,12 +131,14 @@ class _TimetableScreenState extends State<TimetableScreen> {
               .orderBy('time')
               .snapshots(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData)
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
 
             final docs = snapshot.data!.docs;
-            if (docs.isEmpty)
+            if (docs.isEmpty) {
               return const Center(child: Text('No timetable added yet.'));
+            }
 
             final Map<String, List<DocumentSnapshot>> grouped = {};
             for (var doc in docs) {

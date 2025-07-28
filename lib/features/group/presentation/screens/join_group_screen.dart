@@ -26,7 +26,6 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
     });
 
     try {
-      // Search for group by groupCode
       final query = await FirebaseFirestore.instance
           .collection('groups')
           .where('groupCode', isEqualTo: code)
@@ -45,19 +44,21 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       final groupId = groupDoc.id;
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      // Add user to members list
-      // Add user to members list (Safe way using merge)
-      await FirebaseFirestore.instance.collection('groups').doc(groupId).set({
+      // ✅ Add user to members
+      await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .update({
         'members': FieldValue.arrayUnion([uid])
-      }, SetOptions(merge: true));
+      });
 
-      // Save groupId and role to user
+      // ✅ Update user's groupId and role
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'groupId': groupId,
         'role': 'student',
       }, SetOptions(merge: true));
 
-      // Navigate to dashboard
+      // ✅ Navigate to dashboard
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -66,8 +67,11 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
         );
       }
     } catch (e) {
+      String errorMsg = e.toString();
+      print('🔥 Join group error: $errorMsg');
+
       setState(() {
-        _error = 'An error occurred. Please try again.';
+        _error = errorMsg;
         _isLoading = false;
       });
     }

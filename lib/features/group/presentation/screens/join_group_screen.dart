@@ -52,10 +52,10 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       }, SetOptions(merge: true));
 
       // Save groupId and role to user
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'groupId': groupId,
         'role': 'student',
-      });
+      }, SetOptions(merge: true));
 
       // Navigate to dashboard
       if (mounted) {

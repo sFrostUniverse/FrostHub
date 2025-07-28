@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.frosthub.app">
 
+    <!-- ✅ Required for internet access -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="frosthub"
         android:name="${applicationName}"
@@ -46,7 +49,6 @@
                     android:scheme="https"
                     android:host="frosthub.page.link" />
             </intent-filter>
-
         </activity>
 
         <!-- Required by Flutter -->
@@ -55,8 +57,12 @@
             android:value="2" />
     </application>
 
-    <!-- Required to support text processing plugins -->
+    <!-- ✅ Add this to allow launching external URLs via url_launcher -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />

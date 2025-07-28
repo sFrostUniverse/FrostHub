@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -11,92 +10,16 @@ class AnnouncementsScreen extends StatefulWidget {
 }
 
 class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
-  List<Map<String, dynamic>> _announcements = [];
-  bool _isLoading = true;
-  String _role = 'student';
+  bool isAdmin = false;
+  String? _groupId;
 
   @override
   void initState() {
     super.initState();
-    _loadAnnouncements();
+    _checkUserRole();
   }
 
-  Future<void> _loadAnnouncements() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-    _role = userDoc['role'] ?? 'student';
-    final groupId = userDoc['groupId'];
-
-    final snap = await FirebaseFirestore.instance
-        .collection('groups')
-        .doc(groupId)
-        .collection('announcements')
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    setState(() {
-      _announcements = snap.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      _isLoading = false;
-    });
-  }
-
-  void _showAddAnnouncementDialog() {
-    final titleController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Announcement'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(labelText: 'Title'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final user = FirebaseAuth.instance.currentUser;
-              final userDoc = await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user!.uid)
-                  .get();
-              final groupId = userDoc['groupId'];
-
-              final data = {
-                'title': titleController.text.trim(),
-                'timestamp': FieldValue.serverTimestamp(),
-              };
-
-              await FirebaseFirestore.instance
-                  .collection('groups')
-                  .doc(groupId)
-                  .collection('announcements')
-                  .add(data);
-
-              Navigator.pop(context);
-              _loadAnnouncements();
-            },
-            child: const Text('Post'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteAnnouncement(String id) async {
+  Future<void> _checkUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -106,124 +29,146 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         .get();
 
     final data = userDoc.data();
-    if (data == null || !data.containsKey('groupId')) {
-      // Gracefully handle if groupId is missing
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You are not in a group yet.')),
+    if (data == null) return;
+
+    setState(() {
+      isAdmin = data['role'] == 'admin';
+      _groupId = data['groupId'];
+    });
+  }
+
+  void _showAddAnnouncementDialog(BuildContext context) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Announcement'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(labelText: 'Message'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) {
+                  print('❌ User is null');
+                  return;
+                }
+
+                final userDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .get();
+
+                final groupId = userDoc.data()?['groupId'];
+                print('📌 groupId: $groupId');
+
+                if (groupId == null) {
+                  print('❌ No groupId found');
+                  return;
+                }
+
+                final title = titleController.text.trim();
+                final message = messageController.text.trim();
+
+                if (title.isEmpty || message.isEmpty) {
+                  print('⚠️ Title or message is empty');
+                  return;
+                }
+
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('groups')
+                      .doc(groupId)
+                      .collection('announcements')
+                      .add({
+                    'title': title,
+                    'message': message,
+                    'createdAt': FieldValue.serverTimestamp(),
+                    'authorId': user.uid,
+                  });
+
+                  print('✅ Announcement posted successfully');
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  print('🔥 Error posting announcement: $e');
+                }
+              },
+              child: const Text('Post'),
+            ),
+          ],
         );
-      }
-      return;
-    }
-
-    final groupId = data['groupId'];
-
-    await FirebaseFirestore.instance
-        .collection('groups')
-        .doc(groupId)
-        .collection('announcements')
-        .doc(id)
-        .delete();
-
-    if (mounted) {
-      _loadAnnouncements(); // Refresh the list
-    }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Announcements'),
-        actions: _role == 'admin'
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _showAddAnnouncementDialog,
-                )
-              ]
-            : null,
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.indigo),
-              child: Text('FrostHub Menu',
-                  style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
-              onTap: () => Navigator.pushNamed(context, '/dashboard'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.group),
-              title: const Text('Group Info'),
-              onTap: () => Navigator.pushNamed(context, '/groupInfo'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.schedule),
-              title: const Text('Timetable'),
-              onTap: () => Navigator.pushNamed(context, '/timetable'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.campaign),
-              title: const Text('Announcements'),
-              onTap: () => Navigator.pushNamed(context, '/announcements'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.description),
-              title: const Text('Notes'),
-              onTap: () => Navigator.pushNamed(context, '/notes'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () async {
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
-                }
+      appBar: AppBar(title: const Text('Announcements')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('groups')
+              .doc(_groupId) // We'll fetch this in initState
+              .collection('announcements')
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No announcements yet.'));
+            }
+
+            return ListView.builder(
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                final doc = snapshot.data!.docs[index];
+                final title = doc['title'];
+                final message = doc['message'];
+                final createdAt = doc['createdAt']?.toDate();
+
+                return Card(
+                  child: ListTile(
+                    title: Text(title),
+                    subtitle: Text(
+                      '$message\n${createdAt != null ? createdAt.toString() : ''}',
+                    ),
+                  ),
+                );
               },
-            ),
-          ],
+            );
+          },
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _announcements.isEmpty
-              ? const Center(child: Text('No announcements yet.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _announcements.length,
-                  itemBuilder: (context, index) {
-                    final ann = _announcements[index];
-                    final ts = ann['timestamp'] as Timestamp?;
-                    final date = ts != null
-                        ? DateFormat('dd MMM, hh:mm a').format(ts.toDate())
-                        : 'No time';
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        title: Text(ann['title'] ?? 'Untitled'),
-                        subtitle: Text(date),
-                        trailing: _role == 'admin'
-                            ? IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteAnnouncement(ann['id']),
-                              )
-                            : null,
-                      ),
-                    );
-                  },
-                ),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton(
+              onPressed: () => _showAddAnnouncementDialog(context),
+              child: const Icon(Icons.add_comment),
+            )
+          : null,
     );
   }
 }

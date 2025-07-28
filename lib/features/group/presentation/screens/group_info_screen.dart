@@ -1,130 +1,190 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class GroupInfoScreen extends StatelessWidget {
+class GroupInfoScreen extends StatefulWidget {
   const GroupInfoScreen({super.key});
 
-  Future<Map<String, dynamic>?> _getGroupData() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return null;
+  @override
+  State<GroupInfoScreen> createState() => _GroupInfoScreenState();
+}
 
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final groupId = userDoc.data()?['groupId'];
-    final role = userDoc.data()?['role'];
+class _GroupInfoScreenState extends State<GroupInfoScreen> {
+  String? _groupId;
+  String? _groupCode;
+  bool _isAdmin = false;
 
-    if (groupId == null) return null;
+  @override
+  void initState() {
+    super.initState();
+    _loadGroupInfo();
+  }
 
-    final groupDoc = await FirebaseFirestore.instance
-        .collection('groups')
-        .doc(groupId)
-        .get();
-    final groupCode = groupDoc.data()?['groupCode'];
+  Future<void> _loadGroupInfo() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('User not signed in.');
+      return;
+    }
 
-    final membersSnapshot = await FirebaseFirestore.instance
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userData = userDoc.data();
+      if (userData == null) {
+        print('User document not found.');
+        return;
+      }
+
+      final groupId = userData['groupId'] as String?;
+      final isAdmin = userData['role'] == 'admin';
+
+      String? groupCode;
+
+      if (groupId != null) {
+        final groupDoc = await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(groupId)
+            .get();
+
+        final groupData = groupDoc.data();
+        groupCode = groupData?['groupCode'];
+
+        print('Group found: $groupId, code: $groupCode');
+      } else {
+        print('User has no groupId.');
+      }
+
+      setState(() {
+        _groupId = groupId;
+        _isAdmin = isAdmin;
+        _groupCode = groupCode;
+      });
+    } catch (e) {
+      print('Error loading group info: $e');
+    }
+  }
+
+  Stream<List<QueryDocumentSnapshot>> getSortedGroupMembers() {
+    return FirebaseFirestore.instance
         .collection('users')
-        .where('groupId', isEqualTo: groupId)
-        .get();
-
-    final members = membersSnapshot.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'name': data['name'] ?? 'Unnamed',
-        'role': data['role'] ?? 'student',
-        'email': data['email'] ?? '',
-      };
-    }).toList();
-
-    // Sort: Admin first, then by name
-    members.sort((a, b) {
-      if (a['role'] == 'admin') return -1;
-      if (b['role'] == 'admin') return 1;
-      return a['name'].toLowerCase().compareTo(b['name'].toLowerCase());
+        .where('groupId', isEqualTo: _groupId)
+        .snapshots()
+        .map((snapshot) {
+      final docs = snapshot.docs;
+      docs.sort((a, b) {
+        final roleA = a['role'];
+        final roleB = b['role'];
+        if (roleA == 'admin' && roleB != 'admin') return -1;
+        if (roleA != 'admin' && roleB == 'admin') return 1;
+        return 0;
+      });
+      return docs;
     });
+  }
 
-    return {
-      'role': role,
-      'groupCode': groupCode,
-      'members': members,
-    };
+  void _shareInstallLink() async {
+    const apkUrl =
+        'https://github.com/sFrostUniverse/FrostHub/raw/main/apk/FrostHub.apk';
+    final message =
+        'Join our FrostHub group! Download the app:\n$apkUrl\nThen enter the group code: $_groupCode';
+
+    final Uri url =
+        Uri.parse('https://wa.me/?text=${Uri.encodeComponent(message)}');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open share dialog')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_groupId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Group Info')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Group Info")),
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _getGroupData(),
+      appBar: AppBar(
+        title: const Text('Group Info'),
+        actions: _isAdmin && _groupCode != null
+            ? [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Center(
+                    child: Text(
+                      'Code: $_groupCode',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              ]
+            : null,
+      ),
+      body: StreamBuilder<List<QueryDocumentSnapshot>>(
+        stream: getSortedGroupMembers(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data;
-          if (data == null) {
-            return const Center(child: Text("Unable to load group data."));
+          final members = snapshot.data!;
+          if (members.isEmpty) {
+            return const Center(child: Text('No group members found.'));
           }
 
-          final members = data['members'] as List<dynamic>;
-          final isAdmin = data['role'] == 'admin';
-          final groupCode = data['groupCode'];
-
-          return ListView(
+          return ListView.separated(
             padding: const EdgeInsets.all(16),
-            children: [
-              if (isAdmin) ...[
-                const Text("Group Code",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(groupCode ?? 'N/A',
-                          style: const TextStyle(fontSize: 16)),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        onPressed: () {
-                          Clipboard.setData(
-                              ClipboardData(text: groupCode ?? ''));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Group code copied')),
-                          );
-                        },
-                      ),
-                    ],
+            itemCount: members.length,
+            separatorBuilder: (_, __) => const Divider(),
+            itemBuilder: (context, index) {
+              final member = members[index];
+              final name = member['name'] ?? 'Unnamed';
+              final email = member['email'] ?? '';
+              final role = member['role'] ?? 'student';
+
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: role == 'admin'
+                      ? Colors.blue.shade700
+                      : Colors.grey.shade400,
+                  child: Text(name.isNotEmpty ? name[0] : '?'),
+                ),
+                title: Text(name),
+                subtitle: Text(email),
+                trailing: Text(
+                  role.toUpperCase(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: role == 'admin' ? Colors.blue : Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
-              const Text("Members",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...members.map((member) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  child: ListTile(
-                    leading: const Icon(Icons.person),
-                    title: Text(member['name']),
-                    subtitle: Text('${member['email']} • ${member['role']}'),
-                    trailing: member['role'] == 'admin'
-                        ? const Icon(Icons.star, color: Colors.amber)
-                        : null,
-                  ),
-                );
-              }),
-            ],
+              );
+            },
           );
         },
       ),
+      floatingActionButton: _isAdmin
+          ? FloatingActionButton(
+              onPressed: _shareInstallLink,
+              child: const Icon(Icons.person_add),
+              tooltip: 'Invite to Group',
+            )
+          : null,
     );
   }
 }

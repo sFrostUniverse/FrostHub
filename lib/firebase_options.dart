@@ -63,6 +63,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '410532748747',
     projectId: 'frosthub-6ca1c',
     storageBucket: 'frosthub-6ca1c.firebasestorage.app',
+    androidClientId: '410532748747-2dhgk5ckf6gc40soujsqr77ga9k8pj4f.apps.googleusercontent.com',
+    iosClientId: '410532748747-1skso3t41f7feji2fg21f5meqlfkp6aq.apps.googleusercontent.com',
     iosBundleId: 'com.example.frosthub',
   );
 
@@ -72,6 +74,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '410532748747',
     projectId: 'frosthub-6ca1c',
     storageBucket: 'frosthub-6ca1c.firebasestorage.app',
+    androidClientId: '410532748747-2dhgk5ckf6gc40soujsqr77ga9k8pj4f.apps.googleusercontent.com',
+    iosClientId: '410532748747-1skso3t41f7feji2fg21f5meqlfkp6aq.apps.googleusercontent.com',
     iosBundleId: 'com.example.frosthub',
   );
 
@@ -83,4 +87,5 @@ class DefaultFirebaseOptions {
     authDomain: 'frosthub-6ca1c.firebaseapp.com',
     storageBucket: 'frosthub-6ca1c.firebasestorage.app',
   );
+
 }

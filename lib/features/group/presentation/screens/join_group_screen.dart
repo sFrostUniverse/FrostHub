@@ -46,12 +46,10 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
       // Add user to members list
-      await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(groupId)
-          .update({
+      // Add user to members list (Safe way using merge)
+      await FirebaseFirestore.instance.collection('groups').doc(groupId).set({
         'members': FieldValue.arrayUnion([uid])
-      });
+      }, SetOptions(merge: true));
 
       // Save groupId and role to user
       await FirebaseFirestore.instance.collection('users').doc(uid).update({

@@ -65,6 +65,7 @@ class FrostHubApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: startScreen,
       routes: {
+        '/': (_) => const GoogleSignInScreen(),
         '/timetable': (_) => const TimetableScreen(),
         '/announcements': (_) => const AnnouncementsScreen(),
         '/notes': (_) => NotesFolderScreen(

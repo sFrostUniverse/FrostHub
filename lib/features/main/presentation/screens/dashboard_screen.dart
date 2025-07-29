@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frosthub/features/auth/presentation/screens/google_signin_screen.dart';
 import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:frosthub/features/announcements/presentation/widgets/add_announcement_modal.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -211,7 +212,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       for (final doc in docs) {
                         final data = doc.data() as Map<String, dynamic>;
                         final time = data['time'];
-                        final parts = (time as String).split('-');
+                        if (time == null || time is! String) continue;
+                        final parts = time.split('-');
+                        if (parts.length != 2) continue;
                         if (parts.length != 2) continue;
                         final start = _parseTimeOfDay(parts[0]);
                         final end = _parseTimeOfDay(parts[1]);
@@ -250,7 +253,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: const Icon(Icons.campaign),
                   label: 'Add Announcement',
                   onTap: () {
-                    // TODO: show your announcement modal here
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => AddAnnouncementModal(groupId: _groupId!),
+                    );
                   },
                 ),
                 SpeedDialChild(

@@ -89,7 +89,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   void _shareInstallLink() async {
     const apkUrl =
-        'https://github.com/sFrostUniverse/FrostHub/raw/main/apk/FrostHub.apk';
+        'https://github.com/sFrostUniverse/FrostHub/raw/main/apk/app-release.apk';
     final message =
         'Join our FrostHub group! Download the app:\n$apkUrl\nThen enter the group code: $_groupCode';
 

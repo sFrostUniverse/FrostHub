@@ -56,6 +56,7 @@ class _AddTimetableModalState extends State<AddTimetableModal> {
         'teacher': _teacher,
         'startTime': formattedStart,
         'endTime': formattedEnd,
+        'time': '$formattedStart-$formattedEnd', // 👈 Add this line
         'createdAt': FieldValue.serverTimestamp(),
       });
 

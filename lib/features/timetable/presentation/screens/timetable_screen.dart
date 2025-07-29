@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 
 class TimetableScreen extends StatefulWidget {
@@ -54,7 +54,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               .doc(_groupId)
               .collection('timetable')
               .orderBy('day')
-              .orderBy('startTime') // ✅ New field you're storing
+              .orderBy('startTime') // ✅ Now using HH:mm format
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {

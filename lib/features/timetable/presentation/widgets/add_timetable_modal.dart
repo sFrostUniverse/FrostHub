@@ -41,9 +41,10 @@ class _AddTimetableModalState extends State<AddTimetableModal> {
     setState(() => _isLoading = true);
 
     try {
-      final formattedStart =
-          _startTime!.format(context); // Format: "HH:MM AM/PM"
-      final formattedEnd = _endTime!.format(context);
+      String formattedStart =
+          '${_startTime!.hour.toString().padLeft(2, '0')}:${_startTime!.minute.toString().padLeft(2, '0')}';
+      String formattedEnd =
+          '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')}';
 
       await FirebaseFirestore.instance
           .collection('groups')

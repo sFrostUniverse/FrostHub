@@ -6,6 +6,7 @@ import 'package:frosthub/features/group/presentation/screens/group_info_screen.d
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frosthub/features/auth/presentation/screens/google_signin_screen.dart';
 import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -192,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         .where('day',
                             isEqualTo:
                                 DateFormat('EEEE').format(DateTime.now()))
-                        .orderBy('time')
+                        .orderBy('startTime')
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
@@ -236,16 +237,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
       floatingActionButton: _role == 'admin' && _groupId != null
-          ? FloatingActionButton(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => AddTimetableModal(groupId: _groupId!),
-                );
-              },
-              child: const Icon(Icons.add),
-              tooltip: 'Add Timetable Entry',
+          ? SpeedDial(
+              icon: Icons.add,
+              activeIcon: Icons.close,
+              backgroundColor: Colors.blue,
+              children: [
+                SpeedDialChild(
+                  child: const Icon(Icons.campaign),
+                  label: 'Add Announcement',
+                  onTap: () {
+                    // TODO: show your announcement modal here
+                  },
+                ),
+                SpeedDialChild(
+                  child: const Icon(Icons.schedule),
+                  label: 'Add Timetable Entry',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => AddTimetableModal(groupId: _groupId!),
+                    );
+                  },
+                ),
+              ],
             )
           : null,
     );

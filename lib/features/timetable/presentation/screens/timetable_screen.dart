@@ -14,6 +14,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
   String? _groupId;
   String? _role;
 
+  final List<String> days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -72,36 +81,53 @@ class _TimetableScreenState extends State<TimetableScreen> {
               grouped.putIfAbsent(day, () => []).add(doc);
             }
 
-            return ListView(
-              children: grouped.entries.map((entry) {
-                final day = entry.key;
-                final classes = entry.value;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: days.map((day) {
+                  final classes = grouped[day] ?? [];
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      day,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    ...classes.map((classDoc) {
-                      final subject = classDoc['subject'] ?? 'Unknown';
-                      final teacher = classDoc['teacher'] ?? '';
-                      final start = classDoc['startTime'] ?? '';
-                      final end = classDoc['endTime'] ?? '';
-
-                      return Card(
-                        child: ListTile(
-                          title: Text(subject),
-                          subtitle: Text('$teacher • $start - $end'),
+                  return Container(
+                    width: 200, // Width per day column
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          day,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      );
-                    }),
-                  ],
-                );
-              }).toList(),
+                        const SizedBox(height: 8),
+                        ...classes.map((classDoc) {
+                          final subject = classDoc['subject'] ?? 'Unknown';
+                          final teacher = classDoc['teacher'] ?? '';
+                          final start = classDoc['startTime'] ?? '';
+                          final end = classDoc['endTime'] ?? '';
+
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(subject,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  Text('$start - $end'),
+                                  Text(teacher),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             );
           },
         ),

@@ -91,6 +91,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Group Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/group-chat');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.assignment),
               title: const Text('Notes'),
               onTap: () {
@@ -237,6 +245,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 8),
                           _buildClassBar(upcoming, 'Upcoming', Colors.blue),
                         ],
+                      );
+                    },
+                  ),
+            const SizedBox(height: 24),
+            const Text(
+              'Group Chat',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            _groupId == null
+                ? const CircularProgressIndicator()
+                : StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('groups')
+                        .doc(_groupId)
+                        .collection('chat')
+                        .orderBy('timestamp', descending: true)
+                        .limit(1)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+
+                      final lastMsg = snapshot.data!.docs.isNotEmpty
+                          ? snapshot.data!.docs.first.data()
+                              as Map<String, dynamic>
+                          : null;
+
+                      return Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/group-chat');
+                          },
+                          leading: const Icon(Icons.chat_bubble_outline),
+                          title: const Text('Open Group Chat'),
+                          subtitle: Text(
+                            lastMsg != null
+                                ? '${lastMsg['senderName'] ?? 'Someone'}: ${lastMsg['message'] ?? ''}'
+                                : 'No messages yet',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('groups')
+                                .doc(_groupId)
+                                .collection('chat')
+                                .snapshots(),
+                            builder: (context, countSnapshot) {
+                              if (!countSnapshot.hasData)
+                                return const SizedBox();
+                              final count = countSnapshot.data!.docs.length;
+                              return CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.blue,
+                                child: Text(
+                                  count.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),

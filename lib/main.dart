@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:frosthub/features/group/presentation/screens/group_chat_screen.dart';
 import 'firebase_options.dart';
 import 'features/auth/presentation/screens/google_signin_screen.dart';
 import 'features/group/presentation/screens/group_choice_screen.dart';
@@ -77,6 +77,7 @@ class FrostHubApp extends StatelessWidget {
             routes: {
               '/timetable': (_) => const TimetableScreen(),
               '/announcements': (_) => const AnnouncementsScreen(),
+              '/group-chat': (_) => const GroupChatScreen(),
               '/notes': (_) => const NotesFolderScreen(
                     parentId: null,
                     title: 'Notes',

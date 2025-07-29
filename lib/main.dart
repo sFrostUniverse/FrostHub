@@ -13,6 +13,7 @@ import 'features/group/presentation/screens/join_group_screen.dart';
 import 'features/timetable/presentation/screens/timetable_screen.dart';
 import 'features/announcements/presentation/screens/announcements_screen.dart';
 import 'features/notes/presentation/screens/notes_folder_screen.dart';
+import 'package:frosthub/features/settings/presentation/screens/settings_screen.dart';
 
 import 'package:provider/provider.dart';
 import 'package:frosthub/theme/theme_provider.dart';
@@ -83,6 +84,7 @@ class FrostHubApp extends StatelessWidget {
                   ),
               '/group-info': (_) => const GroupInfoScreen(),
               '/join-group': (_) => const JoinGroupScreen(),
+              '/settings': (_) => const SettingsScreen(),
             },
           );
         },

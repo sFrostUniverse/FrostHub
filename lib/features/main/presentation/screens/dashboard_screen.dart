@@ -196,9 +196,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         .orderBy('startTime')
                         .snapshots(),
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Card(
+                          child: ListTile(title: Text('Loading timetable...')),
+                        );
                       }
+
                       final docs = snapshot.data!.docs;
                       final now = TimeOfDay.now();
 
@@ -225,6 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }
 
                       return Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildClassBar(ongoing, 'Ongoing', Colors.green),
                           const SizedBox(height: 8),

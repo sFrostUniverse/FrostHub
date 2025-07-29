@@ -197,8 +197,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       floatingActionButton: _isAdmin
           ? FloatingActionButton(
               onPressed: _shareInstallLink,
-              child: const Icon(Icons.person_add),
               tooltip: 'Invite to Group',
+              child: const Icon(Icons.person_add),
             )
           : null,
     );

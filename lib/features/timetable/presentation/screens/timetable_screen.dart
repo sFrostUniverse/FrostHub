@@ -115,8 +115,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   builder: (_) => AddTimetableModal(groupId: _groupId!),
                 );
               },
-              child: const Icon(Icons.add),
               tooltip: 'Add Timetable Entry',
+              child: const Icon(Icons.add),
             )
           : null,
     );

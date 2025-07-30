@@ -24,7 +24,7 @@ class _AddAnnouncementModalState extends State<AddAnnouncementModal> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) throw Exception("User not signed in");
 
       await FirebaseFirestore.instance
           .collection('groups')
@@ -37,14 +37,16 @@ class _AddAnnouncementModalState extends State<AddAnnouncementModal> {
         'authorId': user.uid,
       });
 
-      if (context.mounted) Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context); // ✅ Always pop AFTER success
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error posting announcement: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+        setState(() => _isPosting = false); // ✅ Reset loading only on error
+      }
     }
-
-    setState(() => _isPosting = false);
   }
 
   @override

@@ -122,7 +122,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                               ),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   );

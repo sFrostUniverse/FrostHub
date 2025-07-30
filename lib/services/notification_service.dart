@@ -7,32 +7,64 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
+    // Initialize time zones (required for zonedSchedule)
     tzData.initializeTimeZones();
 
+    // Android initialization settings
     const AndroidInitializationSettings androidInitSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initSettings =
-        InitializationSettings(android: androidInitSettings);
+    // iOS initialization settings (if needed)
+    const DarwinInitializationSettings iosInitSettings =
+        DarwinInitializationSettings();
 
+    // Combine both
+    const InitializationSettings initSettings = InitializationSettings(
+      android: androidInitSettings,
+      iOS: iosInitSettings,
+    );
+
+    // Initialize the plugin
     await _notificationsPlugin.initialize(initSettings);
   }
 
+  static Future<void> requestPermissions() async {
+    // For Android 13+ and iOS: request notification permission
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestPermission();
+
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+  }
+
   static Future<void> scheduleClassNotification({
+    required int id,
     required String title,
     required String body,
     required DateTime scheduledTime,
-    required int id,
   }) async {
+    final scheduledTz = tz.TZDateTime.from(scheduledTime, tz.local);
+
+    print('🔔 Scheduling notification [$id]: $title at $scheduledTz');
+
     await _notificationsPlugin.zonedSchedule(
       id,
       title,
       body,
-      tz.TZDateTime.from(scheduledTime, tz.local),
+      scheduledTz,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'class_channel_id',
+          'class_channel_id', // Must match your NotificationChannel ID
           'Class Notifications',
+          channelDescription: 'Notifies about upcoming classes',
           importance: Importance.high,
           priority: Priority.high,
         ),
@@ -40,7 +72,7 @@ class NotificationService {
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // no repeat
+      matchDateTimeComponents: DateTimeComponents.time, // No repeat
     );
   }
 

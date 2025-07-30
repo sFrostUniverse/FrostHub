@@ -22,6 +22,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initialize();
+  await NotificationService.requestPermissions();
 
   Widget startScreen = const GoogleSignInScreen();
 

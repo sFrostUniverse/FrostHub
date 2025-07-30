@@ -89,32 +89,31 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           final isMe = msg['senderId'] == _userId;
 
                           return Align(
+                            // ← RETURN this widget
                             alignment: isMe
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
+                                  vertical: 10, horizontal: 14),
+                              margin: const EdgeInsets.symmetric(vertical: 4),
                               decoration: BoxDecoration(
-                                color: isMe
-                                    ? Colors.blue.shade100
-                                    : Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(12),
+                                color:
+                                    isMe ? Colors.blue : Colors.grey.shade300,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(12),
+                                  topRight: const Radius.circular(12),
+                                  bottomLeft: Radius.circular(isMe ? 12 : 0),
+                                  bottomRight: Radius.circular(isMe ? 0 : 12),
+                                ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    msg['senderName'] ?? 'Unknown',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: Colors.grey.shade700),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(msg['message'] ?? ''),
-                                ],
+                              child: Text(
+                                msg['message'] ??
+                                    '', // ✅ this fixes the undefined 'message'
+                                style: TextStyle(
+                                  color: isMe ? Colors.white : Colors.black,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           );

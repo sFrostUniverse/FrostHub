@@ -74,6 +74,33 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     subtitle: Text(
                       '$message\n${createdAt != null ? createdAt.toString() : ''}',
                     ),
+                    onLongPress: isAdmin
+                        ? () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Delete Announcement?'),
+                                content: Text(
+                                    'Are you sure you want to delete "$title"?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              await doc.reference.delete();
+                            }
+                          }
+                        : null,
                   ),
                 );
               },

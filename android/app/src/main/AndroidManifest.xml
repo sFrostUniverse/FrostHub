@@ -3,6 +3,8 @@
 
     <!-- ✅ Required for internet access -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
 
     <application
         android:label="frosthub"

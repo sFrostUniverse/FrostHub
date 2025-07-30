@@ -8,6 +8,8 @@ import 'package:frosthub/features/auth/presentation/screens/google_signin_screen
 import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:frosthub/features/announcements/presentation/widgets/add_announcement_modal.dart';
+import 'package:frosthub/services/notification_service.dart'; // 👈 Import service
+import 'package:frosthub/features/syllabus/presentation/widgets/add_syllabus_modal.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -96,6 +98,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/group-chat');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.book),
+              title: const Text('Syllabus'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/syllabus');
               },
             ),
             ListTile(
@@ -214,6 +224,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final docs = snapshot.data!.docs;
                       final now = TimeOfDay.now();
 
+                      // Schedule class notifications here:
+                      final nowDateTime = DateTime.now();
+                      for (int i = 0; i < docs.length; i++) {
+                        final data = docs[i].data() as Map<String, dynamic>;
+                        final time = data['time'];
+                        if (time == null || time is! String) continue;
+
+                        final parts = time.split('-');
+                        if (parts.length != 2) continue;
+
+                        final start = _parseTimeOfDay(parts[0]);
+                        if (start == null) continue;
+
+                        final classDateTime = DateTime(
+                          nowDateTime.year,
+                          nowDateTime.month,
+                          nowDateTime.day,
+                          start.hour,
+                          start.minute,
+                        );
+
+                        final diff =
+                            classDateTime.difference(nowDateTime).inMinutes;
+                        if (diff > 10) {
+                          NotificationService.scheduleClassNotification(
+                            id: i * 10 + 1,
+                            title: 'Class Soon',
+                            body:
+                                'Your class "${data['subject']}" starts in 10 minutes.',
+                            scheduledTime: classDateTime
+                                .subtract(const Duration(minutes: 10)),
+                          );
+                        }
+
+                        if (diff > 5) {
+                          NotificationService.scheduleClassNotification(
+                            id: i * 10 + 2,
+                            title: 'Get Ready!',
+                            body:
+                                'Your class "${data['subject']}" starts in 5 minutes.',
+                            scheduledTime: classDateTime
+                                .subtract(const Duration(minutes: 5)),
+                          );
+                        }
+                      }
+
+                      // Now check for ongoing and upcoming
                       Map<String, dynamic>? ongoing;
                       Map<String, dynamic>? upcoming;
 
@@ -222,7 +279,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         final time = data['time'];
                         if (time == null || time is! String) continue;
                         final parts = time.split('-');
-                        if (parts.length != 2) continue;
                         if (parts.length != 2) continue;
                         final start = _parseTimeOfDay(parts[0]);
                         final end = _parseTimeOfDay(parts[1]);
@@ -246,8 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _buildClassBar(upcoming, 'Upcoming', Colors.blue),
                         ],
                       );
-                    },
-                  ),
+                    }),
             const SizedBox(height: 24),
             const Text(
               'Group Chat',
@@ -345,6 +400,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       context: context,
                       isScrollControlled: true,
                       builder: (_) => AddTimetableModal(groupId: _groupId!),
+                    );
+                  },
+                ),
+                SpeedDialChild(
+                  child: const Icon(Icons.book),
+                  label: 'Add Syllabus',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => AddSyllabusModal(groupId: _groupId!),
                     );
                   },
                 ),

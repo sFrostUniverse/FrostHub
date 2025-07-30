@@ -9,18 +9,19 @@ import 'features/group/presentation/screens/group_choice_screen.dart';
 import 'features/group/presentation/screens/group_info_screen.dart';
 import 'features/main/presentation/screens/dashboard_screen.dart';
 import 'features/group/presentation/screens/join_group_screen.dart';
-
+import 'package:frosthub/features/syllabus/presentation/screens/syllabus_screen.dart';
 import 'features/timetable/presentation/screens/timetable_screen.dart';
 import 'features/announcements/presentation/screens/announcements_screen.dart';
 import 'features/notes/presentation/screens/notes_folder_screen.dart';
 import 'package:frosthub/features/settings/presentation/screens/settings_screen.dart';
-
+import 'services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:frosthub/theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.initialize();
 
   Widget startScreen = const GoogleSignInScreen();
 
@@ -83,6 +84,7 @@ class FrostHubApp extends StatelessWidget {
                     title: 'Notes',
                   ),
               '/group-info': (_) => const GroupInfoScreen(),
+              '/syllabus': (_) => const SyllabusScreen(),
               '/join-group': (_) => const JoinGroupScreen(),
               '/settings': (_) => const SettingsScreen(),
             },

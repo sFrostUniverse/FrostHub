@@ -62,17 +62,32 @@ class NotificationService {
       scheduledTz,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'class_channel_id', // Must match your NotificationChannel ID
+          'class_channel_id',
           'Class Notifications',
           channelDescription: 'Notifies about upcoming classes',
           importance: Importance.high,
           priority: Priority.high,
         ),
       ),
-      androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // No repeat
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ NEW
+    );
+  }
+
+  static Future<void> showTestNotification() async {
+    await _notificationsPlugin.show(
+      0,
+      'Test Notification',
+      'This is a test message!',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel_id',
+          'Test Notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
     );
   }
 

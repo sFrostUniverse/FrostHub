@@ -352,8 +352,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .collection('chat')
                                 .snapshots(),
                             builder: (context, countSnapshot) {
-                              if (!countSnapshot.hasData)
+                              if (!countSnapshot.hasData) {
                                 return const SizedBox();
+                              }
                               final count = countSnapshot.data!.docs.length;
                               return CircleAvatar(
                                 radius: 12,
@@ -412,6 +413,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       isScrollControlled: true,
                       builder: (_) => AddSyllabusModal(groupId: _groupId!),
                     );
+                  },
+                ),
+                SpeedDialChild(
+                  child: const Icon(Icons.notifications),
+                  label: 'Test Notification',
+                  onTap: () {
+                    NotificationService.showTestNotification();
                   },
                 ),
               ],

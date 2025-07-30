@@ -23,6 +23,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initialize();
   await NotificationService.requestPermissions();
+  await NotificationService.showTestNotification(); // 👈 TEMP test
 
   Widget startScreen = const GoogleSignInScreen();
 

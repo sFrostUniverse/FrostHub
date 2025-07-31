@@ -1,32 +1,53 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+admin.initializeApp();
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+exports.sendAnnouncementNotification = functions.firestore
+  .document('groups/{groupId}/announcements/{announcementId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+    const groupId = context.params.groupId;
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+    if (!data) return null;
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+    const usersSnapshot = await admin.firestore().collection('users')
+      .where('groupId', '==', groupId)
+      .get();
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+    const tokens = [];
+    usersSnapshot.forEach(doc => {
+      const token = doc.data().fcmToken;
+      if (token) tokens.push(token);
+    });
+
+    if (tokens.length === 0) {
+      console.log('🚫 No tokens found for group:', groupId);
+      return null;
+    }
+
+    console.log(`📢 Sending announcement to ${tokens.length} users in group ${groupId}`);
+
+    const message = {
+      notification: {
+        title: data.title || 'New Announcement',
+        body: data.message || '',
+      },
+      tokens: tokens,
+    };
+
+    const response = await admin.messaging().sendMulticast(message);
+    const failedTokens = [];
+
+    response.responses.forEach((res, idx) => {
+      if (!res.success) {
+        failedTokens.push(tokens[idx]);
+        console.error('❌ Failed sending to:', tokens[idx], res.error);
+      }
+    });
+
+    if (failedTokens.length > 0) {
+      console.log('⚠️ Failed tokens:', failedTokens);
+    }
+
+    return null;
+  });

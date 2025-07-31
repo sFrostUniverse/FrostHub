@@ -35,12 +35,18 @@ void main() async {
   final fcmToken = await FirebaseMessaging.instance.getToken();
   print('🔑 FCM Token: $fcmToken');
   tz.initializeTimeZones();
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null && fcmToken != null) {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'fcmToken': fcmToken});
+  }
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   Widget startScreen = const GoogleSignInScreen();
 
-  final user = FirebaseAuth.instance.currentUser;
   if (user != null) {
     final userDocRef =
         FirebaseFirestore.instance.collection('users').doc(user.uid);

@@ -442,10 +442,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 SpeedDialChild(
-                  child: const Icon(Icons.notifications),
-                  label: 'Test Notification',
-                  onTap: () {
-                    NotificationService.showTestNotification();
+                  child: const Icon(Icons.timer),
+                  label: 'Test Class Reminder',
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final fakeStartTime = now.add(const Duration(minutes: 1));
+                    final classData = [
+                      {
+                        'subject': 'Test Class',
+                        'startTime': fakeStartTime.toIso8601String(),
+                      }
+                    ];
+                    await NotificationService.scheduleClassReminders(classData);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Test reminder scheduled in 1 min')),
+                      );
+                    }
                   },
                 ),
               ],

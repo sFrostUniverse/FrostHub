@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzData;
+import 'dart:developer'; // for debug logging
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -14,18 +16,49 @@ class NotificationService {
     const AndroidInitializationSettings androidInitSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS initialization settings (if needed)
+    // iOS initialization settings
     const DarwinInitializationSettings iosInitSettings =
         DarwinInitializationSettings();
 
-    // Combine both
     const InitializationSettings initSettings = InitializationSettings(
       android: androidInitSettings,
       iOS: iosInitSettings,
     );
 
-    // Initialize the plugin
     await _notificationsPlugin.initialize(initSettings);
+
+    // 🔑 Firebase Messaging Setup
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    // 🔐 Get the device token and print it
+    final token = await messaging.getToken();
+    print('🔑 FCM Token: $token');
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final notification = message.notification;
+      if (notification != null) {
+        _notificationsPlugin.show(
+          DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          notification.title,
+          notification.body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'fcm_foreground_channel',
+              'FCM Foreground',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+      }
+    });
+
+    // Handle app open from terminated state via notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('📬 App opened from notification: ${message.notification?.title}');
+      // Optional: Navigate to a specific screen here
+    });
   }
 
   static Future<void> requestPermissions() async {
@@ -45,6 +78,58 @@ class NotificationService {
         );
   }
 
+  static Future<void> showAnnouncementNotification({
+    required String title,
+    required String body,
+  }) async {
+    await _notificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'announcement_channel',
+          'Announcements',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  static Future<void> scheduleClassReminders(
+      List<Map<String, dynamic>> classes) async {
+    for (int i = 0; i < classes.length; i++) {
+      final classData = classes[i];
+
+      final startTime = DateTime.parse(classData['startTime']); // must be ISO
+      final reminder10Min = startTime.subtract(const Duration(minutes: 10));
+      final reminder5Min = startTime.subtract(const Duration(minutes: 5));
+
+      if (reminder10Min.isAfter(DateTime.now())) {
+        await scheduleClassNotification(
+          id: i * 10 + 1,
+          title: 'Upcoming Class',
+          body:
+              '${classData['subject']} starts at ${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}',
+          scheduledTime: reminder10Min,
+        );
+        log('🔔 Scheduled 10-minute reminder for ${classData['subject']} at $reminder10Min');
+      }
+
+      if (reminder5Min.isAfter(DateTime.now())) {
+        await scheduleClassNotification(
+          id: i * 10 + 2,
+          title: 'Get Ready!',
+          body:
+              '${classData['subject']} starts at ${startTime.hour}:${startTime.minute.toString().padLeft(2, '0')}',
+          scheduledTime: reminder5Min,
+        );
+        log('🔔 Scheduled 5-minute reminder for ${classData['subject']} at $reminder5Min');
+      }
+    }
+  }
+
   static Future<void> scheduleClassNotification({
     required int id,
     required String title,
@@ -53,8 +138,6 @@ class NotificationService {
   }) async {
     final scheduledTz = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    print('🔔 Scheduling notification [$id]: $title at $scheduledTz');
-
     await _notificationsPlugin.zonedSchedule(
       id,
       title,
@@ -62,16 +145,16 @@ class NotificationService {
       scheduledTz,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'class_channel_id',
-          'Class Notifications',
-          channelDescription: 'Notifies about upcoming classes',
-          importance: Importance.high,
+          'class_channel',
+          'Class Reminders',
+          importance: Importance.max,
           priority: Priority.high,
         ),
       ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ NEW
+      matchDateTimeComponents: DateTimeComponents.time, // Optional
     );
   }
 

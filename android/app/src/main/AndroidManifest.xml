@@ -8,10 +8,30 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <application
-        android:label="frosthub"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+   <application
+    android:label="frosthub"
+    android:name="${applicationName}"
+    android:icon="@mipmap/ic_launcher"
+    android:enableOnBackInvokedCallback="true">
+
+    <!-- 🔔 Firebase Messaging Service -->
+    <service
+    android:name="com.google.firebase.messaging.FirebaseMessagingService"
+    android:exported="true"
+    tools:replace="android:exported">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+
+
+    <!-- 🔔 Default Channel ID -->
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="default_channel" />
+
+    <!-- ... your other services and activity as-is ... -->
+
 
         <!-- ✅ Notification Receivers (fixed exported conflicts) -->
         <receiver

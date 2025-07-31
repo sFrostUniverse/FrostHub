@@ -17,13 +17,24 @@ import 'package:frosthub/features/settings/presentation/screens/settings_screen.
 import 'services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:frosthub/theme/theme_provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  // You can log or show a local notification here
+  print("🔔 Background Message: ${message.notification?.title}");
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initialize();
   await NotificationService.requestPermissions();
-  await NotificationService.showTestNotification(); // 👈 TEMP test
+  await FirebaseMessaging.instance.requestPermission();
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+  print('🔑 FCM Token: $fcmToken');
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   Widget startScreen = const GoogleSignInScreen();
 

@@ -10,6 +10,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:frosthub/features/announcements/presentation/widgets/add_announcement_modal.dart';
 import 'package:frosthub/services/notification_service.dart'; // 👈 Import service
 import 'package:frosthub/features/syllabus/presentation/widgets/add_syllabus_modal.dart';
+import 'dart:async';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,7 +26,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchGroupId();
+    _fetchGroupId().then((_) {
+      _startAnnouncementListener(); // 👈 Start listening to announcements after group is loaded
+    });
   }
 
   Future<void> _fetchGroupId() async {
@@ -43,6 +46,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _groupId = data['groupId'];
       _role = data['role'];
+    });
+  }
+
+  StreamSubscription? _announcementSubscription;
+
+  @override
+  void dispose() {
+    _announcementSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startAnnouncementListener() async {
+    if (_groupId == null) return;
+
+    _announcementSubscription = FirebaseFirestore.instance
+        .collection('groups')
+        .doc(_groupId)
+        .collection('announcements')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docChanges.isNotEmpty &&
+          snapshot.docChanges.first.type == DocumentChangeType.added) {
+        final data =
+            snapshot.docChanges.first.doc.data() as Map<String, dynamic>;
+        NotificationService.showAnnouncementNotification(
+          title: data['title'] ?? 'New Announcement',
+          body: data['message'] ?? '',
+        );
+      }
     });
   }
 
@@ -225,50 +259,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final now = TimeOfDay.now();
 
                       // Schedule class notifications here:
+                      // Schedule class notifications using centralized method
                       final nowDateTime = DateTime.now();
-                      for (int i = 0; i < docs.length; i++) {
-                        final data = docs[i].data() as Map<String, dynamic>;
-                        final time = data['time'];
-                        if (time == null || time is! String) continue;
 
-                        final parts = time.split('-');
-                        if (parts.length != 2) continue;
+                      final classList = docs
+                          .map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final time = data['time'];
+                            if (time == null || time is! String) return null;
 
-                        final start = _parseTimeOfDay(parts[0]);
-                        if (start == null) continue;
+                            final parts = time.split('-');
+                            if (parts.length != 2) return null;
 
-                        final classDateTime = DateTime(
-                          nowDateTime.year,
-                          nowDateTime.month,
-                          nowDateTime.day,
-                          start.hour,
-                          start.minute,
-                        );
+                            final start = _parseTimeOfDay(parts[0]);
+                            if (start == null) return null;
 
-                        final diff =
-                            classDateTime.difference(nowDateTime).inMinutes;
-                        if (diff > 10) {
-                          NotificationService.scheduleClassNotification(
-                            id: i * 10 + 1,
-                            title: 'Class Soon',
-                            body:
-                                'Your class "${data['subject']}" starts in 10 minutes.',
-                            scheduledTime: classDateTime
-                                .subtract(const Duration(minutes: 10)),
-                          );
-                        }
+                            final classDateTime = DateTime(
+                              nowDateTime.year,
+                              nowDateTime.month,
+                              nowDateTime.day,
+                              start.hour,
+                              start.minute,
+                            );
 
-                        if (diff > 5) {
-                          NotificationService.scheduleClassNotification(
-                            id: i * 10 + 2,
-                            title: 'Get Ready!',
-                            body:
-                                'Your class "${data['subject']}" starts in 5 minutes.',
-                            scheduledTime: classDateTime
-                                .subtract(const Duration(minutes: 5)),
-                          );
-                        }
-                      }
+                            return {
+                              'subject': data['subject'] ?? 'Class',
+                              'startTime': classDateTime
+                                  .toIso8601String(), // ISO format required
+                            };
+                          })
+                          .whereType<Map<String, dynamic>>()
+                          .toList();
+
+                      Future.microtask(() async {
+                        await NotificationService.scheduleClassReminders(
+                            classList);
+                      });
 
                       // Now check for ongoing and upcoming
                       Map<String, dynamic>? ongoing;

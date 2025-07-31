@@ -1,64 +1,33 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tzData;
 import 'dart:developer'; // for debug logging
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    // Initialize time zones (required for zonedSchedule)
-    tzData.initializeTimeZones();
-
-    // Android initialization settings
-    const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // iOS initialization settings
-    const DarwinInitializationSettings iosInitSettings =
-        DarwinInitializationSettings();
-
-    const InitializationSettings initSettings = InitializationSettings(
-      android: androidInitSettings,
-      iOS: iosInitSettings,
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'default_channel', // MUST match manifest
+      'Default Channel',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.high,
     );
 
-    await _notificationsPlugin.initialize(initSettings);
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
 
-    // 🔑 Firebase Messaging Setup
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
 
-    // 🔐 Get the device token and print it
-    final token = await messaging.getToken();
-    print('🔑 FCM Token: $token');
-
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final notification = message.notification;
-      if (notification != null) {
-        _notificationsPlugin.show(
-          DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          notification.title,
-          notification.body,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'fcm_foreground_channel',
-              'FCM Foreground',
-              importance: Importance.max,
-              priority: Priority.high,
-            ),
-          ),
-        );
-      }
-    });
-
-    // Handle app open from terminated state via notification
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('📬 App opened from notification: ${message.notification?.title}');
-      // Optional: Navigate to a specific screen here
-    });
+    // Initialize plugin
+    await flutterLocalNotificationsPlugin.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+    );
   }
 
   static Future<void> requestPermissions() async {

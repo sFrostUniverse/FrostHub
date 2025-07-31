@@ -7,22 +7,45 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'default_channel', // MUST match manifest
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
+
+    // 🔔 DEFAULT CHANNEL (already present)
+    const AndroidNotificationChannel defaultChannel =
+        AndroidNotificationChannel(
+      'default_channel',
       'Default Channel',
       description: 'This channel is used for important notifications.',
       importance: Importance.high,
     );
 
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
+    // 🔔 ANNOUNCEMENT CHANNEL
+    const AndroidNotificationChannel announcementChannel =
+        AndroidNotificationChannel(
+      'announcement_channel',
+      'Announcements',
+      description: 'Notifications for announcements',
+      importance: Importance.high,
+    );
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    // 🔔 CLASS REMINDER CHANNEL
+    const AndroidNotificationChannel classChannel = AndroidNotificationChannel(
+      'class_channel',
+      'Class Reminders',
+      description: 'Reminders for upcoming classes',
+      importance: Importance.high,
+    );
 
-    // Initialize plugin
+    // 🔧 Register all channels
+    final androidPlugin =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidPlugin?.createNotificationChannel(defaultChannel);
+    await androidPlugin?.createNotificationChannel(announcementChannel);
+    await androidPlugin?.createNotificationChannel(classChannel);
+
+    // 📦 Initialize plugin
     await flutterLocalNotificationsPlugin.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -31,7 +54,6 @@ class NotificationService {
   }
 
   static Future<void> requestPermissions() async {
-    // For Android 13+ and iOS: request notification permission
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -45,25 +67,6 @@ class NotificationService {
           badge: true,
           sound: true,
         );
-  }
-
-  static Future<void> showAnnouncementNotification({
-    required String title,
-    required String body,
-  }) async {
-    await _notificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'announcement_channel',
-          'Announcements',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-      ),
-    );
   }
 
   static Future<void> scheduleClassReminders(
@@ -97,6 +100,25 @@ class NotificationService {
         log('🔔 Scheduled 5-minute reminder for ${classData['subject']} at $reminder5Min');
       }
     }
+  }
+
+  static Future<void> showAnnouncementNotification({
+    required String title,
+    required String body,
+  }) async {
+    await _notificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique ID
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'announcement_channel',
+          'Announcements',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
   }
 
   static Future<void> scheduleClassNotification({

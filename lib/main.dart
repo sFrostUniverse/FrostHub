@@ -18,6 +18,7 @@ import 'services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:frosthub/theme/theme_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -33,6 +34,7 @@ void main() async {
   await FirebaseMessaging.instance.requestPermission();
   final fcmToken = await FirebaseMessaging.instance.getToken();
   print('🔑 FCM Token: $fcmToken');
+  tz.initializeTimeZones();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 

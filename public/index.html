@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>FrostHub Email Link Sign-In</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
+    <script>
+      // TODO: Replace with your actual config
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "frosthub-6ca1c.firebaseapp.com",
+        projectId: "frosthub-6ca1c",
+        appId: "YOUR_APP_ID",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+
+      window.onload = async () => {
+        const url = window.location.href;
+        const email = localStorage.getItem("emailForSignIn");
+
+        if (firebase.auth().isSignInWithEmailLink(url)) {
+          if (!email) {
+            const inputEmail = window.prompt("Please enter your email again:");
+            if (!inputEmail) return alert("Email required.");
+            localStorage.setItem("emailForSignIn", inputEmail);
+          }
+
+          try {
+            const result = await firebase.auth().signInWithEmailLink(email || inputEmail, url);
+            document.body.innerHTML = `<h2>✅ Signed in as ${result.user.email}</h2>`;
+          } catch (e) {
+            console.error(e);
+            document.body.innerHTML = `<h2>❌ Error: ${e.message}</h2>`;
+          }
+        } else {
+          document.body.innerHTML = "<h2>Invalid or expired link.</h2>";
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <h2>🔗 Verifying link...</h2>
+  </body>
+</html>

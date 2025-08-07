@@ -302,7 +302,7 @@ class FrostCoreAPI {
     required String userId, // 👈 Add this
     File? imageFile,
   }) async {
-    final uri = Uri.parse('$baseUrl/groups/$groupId/doubts');
+    final uri = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['userId'] = userId; // ✅ REQUIRED

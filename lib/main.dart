@@ -7,7 +7,7 @@ import 'services/notification_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:frosthub/api/frostcore_api.dart';
-
+import 'package:frosthub/features/profile/presentation/screens/profile_screen.dart';
 // Screens
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/group/presentation/screens/group_chat_screen.dart';
@@ -69,6 +69,7 @@ class FrostHubApp extends StatelessWidget {
               '/join-group': (_) => const JoinGroupScreen(),
               '/settings': (_) => const SettingsScreen(),
               '/about': (_) => const AboutScreen(),
+              '/profile': (context) => const ProfileScreen(),
             },
           );
         },

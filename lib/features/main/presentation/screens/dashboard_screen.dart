@@ -11,6 +11,9 @@ import 'package:frosthub/features/syllabus/presentation/widgets/add_syllabus_mod
 import 'package:frosthub/services/notification_service.dart';
 import 'package:frosthub/api/frostcore_api.dart';
 import 'dart:async';
+import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
+import 'package:frosthub/services/auth_service.dart';
+import 'package:frosthub/features/doubt/screens/doubt_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -455,6 +458,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }
                   },
                 ),
+                SpeedDialChild(
+                  child: const Icon(Icons.question_answer),
+                  label: 'Ask a Doubt',
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => AskDoubtModal(groupId: _groupId!),
+                    );
+                  },
+                ),
               ],
             )
           : null,
@@ -609,6 +623,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/announcements');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.question_answer),
+            title: const Text('Doubts'),
+            onTap: () async {
+              Navigator.pop(context);
+              final groupId = await AuthService.getCurrentGroupId();
+              if (groupId != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DoubtScreen(groupId: groupId),
+                  ),
+                );
+              }
             },
           ),
           ListTile(

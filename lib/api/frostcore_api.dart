@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:frosthub/services/auth_service.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
 const String timetableCacheBox = 'timetable_cache';
 const String announcementsCacheBox = 'announcements_cache';
@@ -10,6 +11,26 @@ const String notesCacheBox = 'notes_cache';
 
 class FrostCoreAPI {
   static const String baseUrl = 'https://frostcore.onrender.com';
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token'); // or whatever key you used
+  }
+
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId'); // or 'uid', depending on your app
+  }
+
+  static Future<Map<String, String>> getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
 
   // Google Sign-In
   static Future<Map<String, dynamic>> googleSignIn({
@@ -224,6 +245,83 @@ class FrostCoreAPI {
     } else {
       throw Exception('Failed to load pinned announcements: ${response.body}');
     }
+  }
+
+  static Future<List<dynamic>> getDoubts(String groupId) async {
+    final headers = await getAuthHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/groups/$groupId/doubts'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load doubts: ${response.statusCode}');
+    }
+  }
+
+  static Future<bool> postDoubt({
+    required String title,
+    required String description,
+    required String groupId,
+  }) async {
+    final token = await getToken();
+    final userId = await getUserId();
+
+    final url = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'userId': userId,
+          'groupId': groupId,
+          'question': title, // or description?
+        }),
+      );
+
+      print('📦 postDoubt response: ${response.statusCode}');
+      print('📦 postDoubt body: ${response.body}');
+
+      return response.statusCode == 201;
+    } catch (e) {
+      print('❌ Exception in postDoubt: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> postDoubtWithImage({
+    required String title,
+    required String description,
+    required String groupId,
+    required String userId, // 👈 Add this
+    File? imageFile,
+  }) async {
+    final uri = Uri.parse('$baseUrl/groups/$groupId/doubts');
+    final request = http.MultipartRequest('POST', uri);
+
+    request.fields['userId'] = userId; // ✅ REQUIRED
+    request.fields['question'] = description; // backend expects 'question'
+    request.fields['title'] = title; // optional (you can remove this if unused)
+    request.fields['groupId'] = groupId; // optional (already in URL)
+
+    if (imageFile != null) {
+      final image = await http.MultipartFile.fromPath('image', imageFile.path);
+      request.files.add(image);
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print('📦 Doubt with image response: ${response.statusCode}');
+    print('📦 Response body: ${response.body}');
+
+    return response.statusCode == 201;
   }
 
 // 🔹 Get Upcoming Announcements

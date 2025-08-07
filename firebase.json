@@ -1,0 +1,55 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-south1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "frosthub-6ca1c",
+          "configurations": {
+            "android": "1:410532748747:android:f9c89e468d0aab54cf6a4e",
+            "ios": "1:410532748747:ios:a141cd2280446d24cf6a4e",
+            "macos": "1:410532748747:ios:a141cd2280446d24cf6a4e",
+            "web": "1:410532748747:web:c4052b8a682f2967cf6a4e",
+            "windows": "1:410532748747:web:abfef17881fd0b2bcf6a4e"
+          }
+        }
+      },
+      "android": {
+        "default": {
+          "projectId": "frosthub-6ca1c",
+          "appId": "1:410532748747:android:f9c89e468d0aab54cf6a4e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}

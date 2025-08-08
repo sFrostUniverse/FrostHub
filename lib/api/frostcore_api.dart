@@ -281,7 +281,7 @@ class FrostCoreAPI {
         body: jsonEncode({
           'userId': userId,
           'groupId': groupId,
-          'question': title, // or description?
+          'question': description,
         }),
       );
 
@@ -305,10 +305,13 @@ class FrostCoreAPI {
     final uri = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
     final request = http.MultipartRequest('POST', uri);
 
-    request.fields['userId'] = userId; // ✅ REQUIRED
-    request.fields['question'] = description; // backend expects 'question'
-    request.fields['title'] = title; // optional (you can remove this if unused)
-    request.fields['groupId'] = groupId; // optional (already in URL)
+    request.fields['userId'] = userId;
+    request.fields['question'] = description; // ✅ correct
+
+    if (imageFile != null) {
+      final image = await http.MultipartFile.fromPath('image', imageFile.path);
+      request.files.add(image);
+    }
 
     if (imageFile != null) {
       final image = await http.MultipartFile.fromPath('image', imageFile.path);

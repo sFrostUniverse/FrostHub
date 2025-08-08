@@ -159,8 +159,18 @@ class _NotesFolderScreenState extends State<NotesFolderScreen> {
             onPressed: () async {
               final title = titleController.text.trim();
               final url = urlController.text.trim();
-              if (title.isEmpty || url.isEmpty || _groupId == null) return;
-
+              if (title.isEmpty ||
+                  url.isEmpty ||
+                  _groupId == null ||
+                  widget.parentId == null) {
+                // Prevent creating file at root
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          "Please create or enter a folder before adding a PDF.")),
+                );
+                return;
+              }
               await FrostCoreAPI.createNote(
                 groupId: _groupId!,
                 title: title,

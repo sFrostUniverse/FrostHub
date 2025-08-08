@@ -49,26 +49,43 @@ class _AskDoubtModalState extends State<AskDoubtModal> {
       return;
     }
 
-    final success = await FrostCoreAPI.postDoubtWithImage(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      groupId: widget.groupId,
-      userId: userId, // ✅ Pass userId here
-      imageFile: _selectedImage,
-    );
+    try {
+      print('📤 Submitting doubt...');
+      print('  Title: ${_titleController.text.trim()}');
+      print('  Description: ${_descriptionController.text.trim()}');
+      print('  Group ID: ${widget.groupId}');
+      print('  User ID: $userId');
+      print('  Image path: ${_selectedImage?.path}');
 
-    if (context.mounted) {
-      Navigator.pop(context); // Close modal
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? 'Doubt submitted successfully.'
-              : 'Failed to submit doubt.'),
-        ),
+      final success = await FrostCoreAPI.postDoubtWithImage(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        groupId: widget.groupId,
+        userId: userId,
+        imageFile: _selectedImage,
       );
-    }
 
-    setState(() => _isLoading = false);
+      if (context.mounted) {
+        Navigator.pop(context); // Close modal
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+                ? 'Doubt submitted successfully.'
+                : 'Failed to submit doubt.'),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error while submitting doubt: $e');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to submit doubt')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override

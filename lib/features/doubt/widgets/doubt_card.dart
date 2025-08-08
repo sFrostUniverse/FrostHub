@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:frosthub/features/doubt/screens/doubt_detail_screen.dart';
 
 class DoubtCard extends StatelessWidget {
   final Map<String, dynamic> doubt;
+  final VoidCallback onAnswered;
 
-  const DoubtCard({super.key, required this.doubt});
+  const DoubtCard({
+    super.key,
+    required this.doubt,
+    required this.onAnswered,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -12,32 +18,54 @@ class DoubtCard extends StatelessWidget {
     final author = doubt['createdBy']?['username'] ?? 'Unknown';
     final timestamp = doubt['createdAt'] ?? '';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DoubtDetailScreen(doubt: doubt),
+          ),
+        ).then((_) {
+          onAnswered(); // Refresh after returning
+        });
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
                 style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(description),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('By $author',
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'By $author',
                     style: const TextStyle(
-                        fontStyle: FontStyle.italic, fontSize: 12)),
-                Text(
-                  timestamp.toString().split('T').first,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            )
-          ],
+                      fontStyle: FontStyle.italic,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    timestamp.toString().split('T').first,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

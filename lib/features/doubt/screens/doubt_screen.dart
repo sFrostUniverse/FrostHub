@@ -5,8 +5,13 @@ import 'package:frosthub/features/doubt/widgets/doubt_card.dart';
 
 class DoubtScreen extends StatefulWidget {
   final String groupId;
+  final VoidCallback? onAnswered;
 
-  const DoubtScreen({super.key, required this.groupId});
+  const DoubtScreen({
+    super.key,
+    required this.groupId,
+    this.onAnswered,
+  });
 
   @override
   State<DoubtScreen> createState() => _DoubtScreenState();
@@ -66,7 +71,10 @@ class _DoubtScreenState extends State<DoubtScreen> {
               itemCount: doubts.length,
               itemBuilder: (context, index) {
                 final doubt = doubts[index];
-                return DoubtCard(doubt: doubt);
+                return DoubtCard(
+                  doubt: doubt,
+                  onAnswered: _refreshDoubts,
+                );
               },
             ),
           );

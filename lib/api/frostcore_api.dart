@@ -4,6 +4,7 @@ import 'package:frosthub/services/auth_service.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 const String timetableCacheBox = 'timetable_cache';
 const String announcementsCacheBox = 'announcements_cache';
@@ -282,6 +283,7 @@ class FrostCoreAPI {
           'userId': userId,
           'groupId': groupId,
           'question': description,
+          'title': title,
         }),
       );
 
@@ -299,32 +301,60 @@ class FrostCoreAPI {
     required String title,
     required String description,
     required String groupId,
-    required String userId, // 👈 Add this
+    required String userId,
     File? imageFile,
   }) async {
     final uri = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
     final request = http.MultipartRequest('POST', uri);
 
+    request.fields['title'] = title;
     request.fields['userId'] = userId;
-    request.fields['question'] = description; // ✅ correct
+    request.fields['groupId'] = groupId; // 👈 ADD THIS
+    request.fields['question'] = description;
 
     if (imageFile != null) {
       final image = await http.MultipartFile.fromPath('image', imageFile.path);
       request.files.add(image);
     }
 
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📦 Doubt with image response: ${response.statusCode}');
+      print('📦 Response body: ${response.body}');
+
+      if (response.statusCode != 201) {
+        throw Exception(
+            'Failed to post doubt with image: ${response.statusCode} ${response.body}');
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ Error while submitting doubt: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> answerDoubt(String doubtId, String answer,
+      {File? imageFile}) async {
+    final uri = Uri.parse('$baseUrl/api/doubts/$doubtId/answer');
+
+    final request = http.MultipartRequest('PUT', uri)
+      ..fields['answer'] = answer;
+
     if (imageFile != null) {
-      final image = await http.MultipartFile.fromPath('image', imageFile.path);
-      request.files.add(image);
+      request.files
+          .add(await http.MultipartFile.fromPath('image', imageFile.path));
     }
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
 
-    print('📦 Doubt with image response: ${response.statusCode}');
-    print('📦 Response body: ${response.body}');
+    debugPrint("📦 answerDoubt response: ${response.statusCode}");
+    debugPrint("📦 response body: ${response.body}");
 
-    return response.statusCode == 201;
+    return response.statusCode == 200;
   }
 
 // 🔹 Get Upcoming Announcements

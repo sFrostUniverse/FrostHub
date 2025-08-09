@@ -31,9 +31,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<Map<String, dynamic>> _todaysTimetable = [];
 
-  Map<String, dynamic>? _chatPreview;
-  bool _isLoadingChatPreview = true;
-
   Timer? _refreshTimer;
 
   @override
@@ -87,10 +84,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _fetchTodayTimetable(token);
       });
 
-      SocketService().socket.on('chat:message', (_) {
-        _fetchChatPreview(token, profile['groupId']);
-      });
-
       setState(() {
         _groupId = profile['groupId'];
         _role = profile['role'];
@@ -98,7 +91,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       await _fetchLatestAnnouncement(token);
       await _fetchTodayTimetable(token);
-      await _fetchChatPreview(token, profile['groupId']);
     } catch (e) {
       print('Error loading dashboard data: $e');
     }
@@ -163,22 +155,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await NotificationService.scheduleClassReminders(classList);
     } catch (e) {
       print('Error fetching timetable: $e');
-    }
-  }
-
-  Future<void> _fetchChatPreview(String token, String groupId) async {
-    try {
-      final preview = await FrostCoreAPI.getGroupChatPreview(
-        token: token,
-        groupId: groupId,
-      );
-      setState(() {
-        _chatPreview = preview;
-        _isLoadingChatPreview = false;
-      });
-    } catch (e) {
-      print('❌ Chat preview fetch failed: $e');
-      setState(() => _isLoadingChatPreview = false);
     }
   }
 
@@ -333,22 +309,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // Group Chat
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Group Chat',
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildChatPreviewCard(),
-                                ],
-                              ),
-                            ),
                           ],
                         )
                       : Column(
@@ -380,14 +340,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   )),
                             ],
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Group Chat',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildChatPreviewCard(),
                           ],
                         );
                 },
@@ -396,146 +348,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: _role == 'admin'
+      floatingActionButton: (_role == 'admin' || _role == 'member')
           ? SpeedDial(
               icon: Icons.add,
               activeIcon: Icons.close,
               backgroundColor: Colors.blue,
-              children: [
-                SpeedDialChild(
-                  child: const Icon(Icons.campaign),
-                  label: 'Add Announcement',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => AddAnnouncementModal(groupId: _groupId!),
-                    );
-                  },
-                ),
-                SpeedDialChild(
-                  child: const Icon(Icons.schedule),
-                  label: 'Add Timetable Entry',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => AddTimetableModal(groupId: _groupId!),
-                    );
-                  },
-                ),
-                SpeedDialChild(
-                  child: const Icon(Icons.book),
-                  label: 'Add Syllabus',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => AddSyllabusModal(groupId: _groupId!),
-                    );
-                  },
-                ),
-                SpeedDialChild(
-                  child: const Icon(Icons.timer),
-                  label: 'Test Class Reminder',
-                  onTap: () async {
-                    final now = DateTime.now();
-                    final testClass = [
-                      {
-                        'subject': 'Test Class',
-                        'startTime': now
-                            .add(const Duration(minutes: 1))
-                            .toIso8601String(),
-                      }
-                    ];
-                    await NotificationService.scheduleClassReminders(testClass);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Test reminder scheduled in 1 min'),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                SpeedDialChild(
-                  child: const Icon(Icons.question_answer),
-                  label: 'Ask a Doubt',
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => AskDoubtModal(groupId: _groupId!),
-                    );
-                  },
-                ),
-              ],
+              children: _role == 'admin'
+                  ? [
+                      SpeedDialChild(
+                        child: const Icon(Icons.campaign),
+                        label: 'Add Announcement',
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) =>
+                                AddAnnouncementModal(groupId: _groupId!),
+                          );
+                        },
+                      ),
+                      SpeedDialChild(
+                        child: const Icon(Icons.schedule),
+                        label: 'Add Timetable Entry',
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) =>
+                                AddTimetableModal(groupId: _groupId!),
+                          );
+                        },
+                      ),
+                      SpeedDialChild(
+                        child: const Icon(Icons.book),
+                        label: 'Add Syllabus',
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) =>
+                                AddSyllabusModal(groupId: _groupId!),
+                          );
+                        },
+                      ),
+                      SpeedDialChild(
+                        child: const Icon(Icons.question_answer),
+                        label: 'Ask a Doubt',
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => AskDoubtModal(groupId: _groupId!),
+                          );
+                        },
+                      ),
+                    ]
+                  : [
+                      // Only ask doubt for members
+                      SpeedDialChild(
+                        child: const Icon(Icons.question_answer),
+                        label: 'Ask a Doubt',
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => AskDoubtModal(groupId: _groupId!),
+                          );
+                        },
+                      ),
+                    ],
             )
           : null,
     );
-  }
-
-  Widget _buildChatPreviewCard() {
-    if (_isLoadingChatPreview) {
-      return const Card(
-        child: ListTile(
-          leading: Icon(Icons.chat_bubble_outline),
-          title: Text('Loading chat preview...'),
-        ),
-      );
-    }
-
-    if (_chatPreview == null) {
-      return Card(
-        child: ListTile(
-          leading: const Icon(Icons.chat_bubble_outline),
-          title: const Text('No messages yet'),
-          subtitle: const Text('Start chatting with your group now!'),
-          onTap: _openGroupChat,
-        ),
-      );
-    }
-
-    final sender = _chatPreview!['senderName'] ?? 'Someone';
-    final message = _chatPreview!['message'] ?? '';
-    final time = _chatPreview!['createdAt'] ?? '';
-
-    return Card(
-      elevation: 2,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.chat_bubble_outline),
-        title: Text('$sender:',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(message),
-        trailing: Text(_formatTime(time)),
-        onTap: _openGroupChat,
-      ),
-    );
-  }
-
-  String _formatTime(String isoTime) {
-    try {
-      final date = DateTime.parse(isoTime).toLocal();
-      final now = DateTime.now();
-
-      if (date.day == now.day &&
-          date.month == now.month &&
-          date.year == now.year) {
-        return DateFormat('h:mm a').format(date); // e.g. 3:45 PM
-      } else {
-        return DateFormat('MMM d').format(date); // e.g. Aug 4
-      }
-    } catch (_) {
-      return '';
-    }
-  }
-
-  void _openGroupChat() {
-    if (_groupId == null) return;
-    Navigator.pushNamed(context, '/group-chat');
   }
 
   Widget _buildDrawer(BuildContext context) {
@@ -639,14 +523,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 );
               }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.chat),
-            title: const Text('Group Chat'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/group-chat');
             },
           ),
           ListTile(

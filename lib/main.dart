@@ -10,7 +10,6 @@ import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/profile/presentation/screens/profile_screen.dart';
 // Screens
 import 'features/auth/presentation/screens/splash_screen.dart';
-import 'features/group/presentation/screens/group_chat_screen.dart';
 import 'features/group/presentation/screens/group_info_screen.dart';
 import 'features/group/presentation/screens/join_group_screen.dart';
 import 'features/syllabus/presentation/screens/syllabus_screen.dart';
@@ -59,7 +58,6 @@ class FrostHubApp extends StatelessWidget {
             routes: {
               '/timetable': (_) => const TimetableScreen(),
               '/announcements': (_) => const AnnouncementsScreen(),
-              '/group-chat': (_) => const GroupChatScreen(),
               '/notes': (_) => const NotesFolderScreen(
                     parentId: null,
                     title: 'Notes',

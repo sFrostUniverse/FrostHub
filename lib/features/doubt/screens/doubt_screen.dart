@@ -3,6 +3,16 @@ import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
 import 'package:frosthub/features/doubt/widgets/doubt_card.dart';
 
+// Helper to fix image URLs that may be partial or full URLs
+String fixImageUrl(String? url) {
+  if (url == null || url.isEmpty) return '';
+  if (url.startsWith('http')) {
+    return url; // URL already complete
+  } else {
+    return 'http://frostcore.onrender.com$url'; // Prepend your backend base URL
+  }
+}
+
 class DoubtScreen extends StatefulWidget {
   final String groupId;
   final VoidCallback? onAnswered;
@@ -27,9 +37,20 @@ class _DoubtScreenState extends State<DoubtScreen> {
   }
 
   void _loadDoubts() {
-    print('📦 groupId: ${widget.groupId}'); // 👈 Debug print
-    setState(() {
-      _doubtsFuture = FrostCoreAPI.getDoubts(widget.groupId);
+    print('📦 groupId: ${widget.groupId}'); // your existing debug print
+    FrostCoreAPI.getDoubts(widget.groupId).then((doubts) {
+      for (var d in doubts) {
+        print('Image URL from API: ${fixImageUrl(d['imageUrl'])}');
+      }
+      setState(() {
+        _doubtsFuture =
+            Future.value(doubts); // wrap doubts in a Future for FutureBuilder
+      });
+    }).catchError((e) {
+      print('Error fetching doubts: $e');
+      setState(() {
+        _doubtsFuture = Future.error(e);
+      });
     });
   }
 

@@ -5,6 +5,9 @@ import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart'; // gives you XFile
+import 'package:http_parser/http_parser.dart'; // for MediaType
+import 'package:mime/mime.dart';
 
 const String timetableCacheBox = 'timetable_cache';
 const String announcementsCacheBox = 'announcements_cache';
@@ -336,25 +339,68 @@ class FrostCoreAPI {
     }
   }
 
-  static Future<bool> answerDoubt(String doubtId, String answer,
-      {File? imageFile}) async {
+  static Future<bool> answerDoubt(
+    String doubtId,
+    String answer, {
+    XFile? imageFile, // <-- now XFile instead of File
+  }) async {
     final uri = Uri.parse('$baseUrl/api/doubts/$doubtId/answer');
-
     final request = http.MultipartRequest('PUT', uri)
       ..fields['answer'] = answer;
 
     if (imageFile != null) {
-      request.files
-          .add(await http.MultipartFile.fromPath('image', imageFile.path));
+      // Detect MIME type from file bytes or extension
+      String? mimeType;
+
+      if (kIsWeb) {
+        // Web: read file bytes
+        final bytes = await imageFile.readAsBytes();
+        mimeType = lookupMimeType(imageFile.name, headerBytes: bytes);
+        request.files.add(http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: imageFile.name,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        ));
+      } else {
+        // Mobile: get from path
+        mimeType = lookupMimeType(imageFile.path);
+        request.files.add(await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+        ));
+      }
+
+      debugPrint("📦 Attaching image with MIME: $mimeType");
     }
 
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    try {
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
 
-    debugPrint("📦 answerDoubt response: ${response.statusCode}");
-    debugPrint("📦 response body: ${response.body}");
+      debugPrint("📦 answerDoubt response: ${response.statusCode}");
+      debugPrint("📦 response body: ${response.body}");
 
-    return response.statusCode == 200;
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("❌ Error in answerDoubt: $e");
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDoubtById(String doubtId) async {
+    final headers = await getAuthHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/doubts/$doubtId'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to fetch doubt: ${response.statusCode}');
+    }
   }
 
 // 🔹 Get Upcoming Announcements
@@ -435,29 +481,6 @@ class FrostCoreAPI {
       final cached = box.get(cacheKey);
       if (cached != null) return List<Map<String, dynamic>>.from(cached);
       rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>?> getGroupChatPreview({
-    required String token,
-    required String groupId,
-  }) async {
-    final url = Uri.parse('$baseUrl/api/groups/$groupId/chat/preview');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['latestMessage'] as Map<String, dynamic>?;
-    } else if (response.statusCode == 204) {
-      return null; // No messages yet
-    } else {
-      throw Exception('Failed to fetch chat preview: ${response.body}');
     }
   }
 

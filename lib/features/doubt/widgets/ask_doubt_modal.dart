@@ -50,37 +50,28 @@ class _AskDoubtModalState extends State<AskDoubtModal> {
     }
 
     try {
-      print('📤 Submitting doubt...');
-      print('  Title: ${_titleController.text.trim()}');
-      print('  Description: ${_descriptionController.text.trim()}');
-      print('  Group ID: ${widget.groupId}');
-      print('  User ID: $userId');
-      print('  Image path: ${_selectedImage?.path}');
-
       final success = await FrostCoreAPI.postDoubtWithImage(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         groupId: widget.groupId,
-        userId: userId,
-        imageFile: _selectedImage,
+        imageFile: _selectedImage != null ? File(_selectedImage!.path) : null,
       );
 
+      if (!success) {
+        throw Exception('API returned failure');
+      }
+
       if (context.mounted) {
-        Navigator.pop(context); // Close modal
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success
-                ? 'Doubt submitted successfully.'
-                : 'Failed to submit doubt.'),
-          ),
+          const SnackBar(content: Text('Doubt submitted successfully')),
         );
       }
     } catch (e) {
-      print('❌ Error while submitting doubt: $e');
-
+      print('❌ Submission error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to submit doubt')),
+          SnackBar(content: Text('Failed to submit doubt: $e')),
         );
       }
     } finally {

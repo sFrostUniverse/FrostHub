@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:frosthub/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:timezone/data/latest.dart'
-    as tz; // ✅ Required for timezone init
+import 'package:timezone/data/latest.dart' as tz;
 import 'services/notification_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/profile/presentation/screens/profile_screen.dart';
+
 // Screens
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/group/presentation/screens/group_info_screen.dart';
@@ -18,6 +18,8 @@ import 'features/announcements/presentation/screens/announcements_screen.dart';
 import 'features/notes/presentation/screens/notes_folder_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/settings/presentation/screens/about_screen.dart';
+
+// ✅ Test login page
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +56,10 @@ class FrostHubApp extends StatelessWidget {
             theme: ThemeData.light(),
             darkTheme: ThemeData.dark(),
             themeMode: themeProvider.themeMode,
+
+            // 🔹 Change home to TestLoginPage temporarily
             home: const SplashScreen(),
+
             routes: {
               '/timetable': (_) => const TimetableScreen(),
               '/announcements': (_) => const AnnouncementsScreen(),

@@ -25,9 +25,19 @@ class DoubtCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = doubt['title'] ?? 'No Title';
     final description = doubt['description'] ?? 'No Description';
-    final author = doubt['createdBy']?['username'] ?? 'Unknown';
-    final timestamp = doubt['createdAt'] ?? '';
-    final imageUrl = fixImageUrl(doubt['imageUrl']); // <-- Fix URL here
+
+    // Use 'userId' for author email or fallback
+    final author = doubt['userId']?['email'] ?? 'Unknown';
+
+    final timestamp = doubt['createdAt'];
+    String formattedDate = '';
+    if (timestamp != null && timestamp is String && timestamp.contains('T')) {
+      formattedDate = timestamp.split('T').first;
+    } else if (timestamp != null) {
+      formattedDate = timestamp.toString();
+    }
+
+    final imageUrl = fixImageUrl(doubt['imageUrl']);
 
     return GestureDetector(
       onTap: () {
@@ -35,12 +45,12 @@ class DoubtCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (_) => DoubtDetailScreen(
-              doubtId: doubt['_id'], // ✅ pass the ID
-              initialDoubt: doubt, // ✅ pass the full map for initial render
+              doubtId: doubt['_id'],
+              initialDoubt: doubt,
             ),
           ),
         ).then((_) {
-          onAnswered(); // Refresh after returning
+          onAnswered();
         });
       },
       child: Card(
@@ -62,8 +72,6 @@ class DoubtCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
-
-              // Show image if present
               if (imageUrl.isNotEmpty)
                 Image.network(
                   imageUrl,
@@ -71,7 +79,6 @@ class DoubtCard extends StatelessWidget {
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
-
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -84,7 +91,7 @@ class DoubtCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    timestamp.toString().split('T').first,
+                    formattedDate,
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],

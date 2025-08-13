@@ -24,22 +24,40 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Future<void> _loadNotes() async {
-    final user = await AuthService.getUser();
-    if (user == null) return;
+    setState(() => _isLoading = true);
 
-    final groupId = user['groupId'];
-    final admin = user['role'] == 'admin';
+    // Get user
+    final user = await AuthService.getUser();
+    print('🔍 User data in _loadNotes(): $user');
+
+    // Try to get groupId from user, fallback to AuthService
+    String? groupId = user?['groupId'];
+    if (groupId == null || groupId.isEmpty) {
+      groupId = await AuthService.getCurrentGroupId();
+      print('🧪 Fallback groupId for notes: $groupId');
+    }
+
+    if (groupId == null || groupId.isEmpty) {
+      print('❌ No groupId found, cannot fetch notes');
+      setState(() {
+        _isLoading = false;
+        _notes = [];
+      });
+      return;
+    }
 
     try {
       final notes = await FrostCoreAPI.getNotes(groupId, null);
+      final fixedNotes =
+          notes.map((n) => Map<String, dynamic>.from(n)).toList();
+      print('📥 Notes fetched: ${fixedNotes.length}');
       setState(() {
         _groupId = groupId;
-        isAdmin = admin;
-        _notes = notes;
+        _notes = fixedNotes;
         _isLoading = false;
       });
     } catch (e) {
-      print('Failed to load notes: $e');
+      print('❌ Failed to load notes: $e');
       setState(() => _isLoading = false);
     }
   }

@@ -16,20 +16,22 @@ const String notesCacheBox = 'notes_cache';
 class FrostCoreAPI {
   static const String baseUrl = 'https://frostcore.onrender.com';
 
+// Replace getToken() with:
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token'); // or whatever key you used
+    final token = prefs.getString('token');
+    // Use hardcoded JWT if token is null
+    return token ??
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OGZjNTMwNWUxYTc0NGNiNmYxOWE4MCIsImVtYWlsIjoiZnJvc3R5eXVuaXZlcnNlQGdtYWlsLmNvbSIsImlhdCI6MTc1NTA3ODI4NCwiZXhwIjoxNzU1NjgzMDg0fQ.-rmNCX9Ue6eWMfcz6A_UDIaI7rvPMPDSUElZ4b10sZ4";
   }
 
   static Future<String?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('userId'); // or 'uid', depending on your app
+    return prefs.getString('userId');
   }
 
   static Future<Map<String, String>> getAuthHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
+    final token = await getToken();
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -252,17 +254,18 @@ class FrostCoreAPI {
   }
 
   static Future<List<dynamic>> getDoubts(String groupId) async {
-    final headers = await getAuthHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/groups/$groupId/doubts'),
-      headers: headers,
-    );
+    if (groupId.isEmpty) throw Exception('❌ groupId is empty');
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load doubts: ${response.statusCode}');
+    final url = Uri.parse('$baseUrl/api/doubts/groups/$groupId/doubts');
+    final headers = await getAuthHeaders();
+
+    final response = await http.get(url, headers: headers);
+
+    if (response.statusCode != 200) {
+      throw Exception('❌ Failed to load doubts: ${response.body}');
     }
+
+    return jsonDecode(response.body);
   }
 
   static Future<bool> postDoubt({
@@ -270,71 +273,56 @@ class FrostCoreAPI {
     required String description,
     required String groupId,
   }) async {
-    final token = await getToken();
-    final userId = await getUserId();
+    final url = Uri.parse('$baseUrl/api/doubts/groups/$groupId/doubts');
+    final headers = await getAuthHeaders();
 
-    final url = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
+    final response = await http.post(
+      url,
+      headers: headers,
+      body: jsonEncode({'title': title, 'description': description}),
+    );
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'userId': userId,
-          'groupId': groupId,
-          'question': description,
-          'title': title,
-        }),
-      );
+    print('📦 postDoubt status: ${response.statusCode}');
+    print('📦 postDoubt body: ${response.body}');
 
-      print('📦 postDoubt response: ${response.statusCode}');
-      print('📦 postDoubt body: ${response.body}');
-
-      return response.statusCode == 201;
-    } catch (e) {
-      print('❌ Exception in postDoubt: $e');
-      return false;
-    }
+    return response.statusCode == 201;
   }
 
   static Future<bool> postDoubtWithImage({
     required String title,
     required String description,
     required String groupId,
-    required String userId,
     File? imageFile,
   }) async {
-    final uri = Uri.parse('$baseUrl/api/groups/$groupId/doubts');
+    final uri = Uri.parse('$baseUrl/api/doubts/groups/$groupId/doubts');
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['title'] = title;
-    request.fields['userId'] = userId;
-    request.fields['groupId'] = groupId; // 👈 ADD THIS
-    request.fields['question'] = description;
+    request.fields['description'] = description;
 
-    if (imageFile != null) {
-      final image = await http.MultipartFile.fromPath('image', imageFile.path);
-      request.files.add(image);
+    if (imageFile != null && await imageFile.exists()) {
+      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+      final parts = mimeType.split('/');
+      request.files.add(await http.MultipartFile.fromPath(
+        'image',
+        imageFile.path,
+        contentType: MediaType(parts[0], parts[1]),
+      ));
     }
+
+    final token = await getToken();
+    request.headers['Authorization'] = 'Bearer $token';
 
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print('📦 Doubt with image response: ${response.statusCode}');
-      print('📦 Response body: ${response.body}');
+      print('📦 postDoubtWithImage status: ${response.statusCode}');
+      print('📦 postDoubtWithImage body: ${response.body}');
 
-      if (response.statusCode != 201) {
-        throw Exception(
-            'Failed to post doubt with image: ${response.statusCode} ${response.body}');
-      }
-
-      return true;
+      return response.statusCode == 201;
     } catch (e) {
-      print('❌ Error while submitting doubt: $e');
+      print('❌ Exception during postDoubtWithImage: $e');
       return false;
     }
   }
@@ -342,18 +330,24 @@ class FrostCoreAPI {
   static Future<bool> answerDoubt(
     String doubtId,
     String answer, {
-    XFile? imageFile, // <-- now XFile instead of File
+    XFile? imageFile,
   }) async {
     final uri = Uri.parse('$baseUrl/api/doubts/$doubtId/answer');
     final request = http.MultipartRequest('PUT', uri)
       ..fields['answer'] = answer;
 
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      debugPrint('❌ No auth token found');
+      return false;
+    }
+
+    request.headers['Authorization'] = 'Bearer $token';
+
     if (imageFile != null) {
-      // Detect MIME type from file bytes or extension
       String? mimeType;
 
       if (kIsWeb) {
-        // Web: read file bytes
         final bytes = await imageFile.readAsBytes();
         mimeType = lookupMimeType(imageFile.name, headerBytes: bytes);
         request.files.add(http.MultipartFile.fromBytes(
@@ -363,7 +357,6 @@ class FrostCoreAPI {
           contentType: mimeType != null ? MediaType.parse(mimeType) : null,
         ));
       } else {
-        // Mobile: get from path
         mimeType = lookupMimeType(imageFile.path);
         request.files.add(await http.MultipartFile.fromPath(
           'image',

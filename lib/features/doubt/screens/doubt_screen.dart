@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
 import 'package:frosthub/features/doubt/widgets/doubt_card.dart';
+import 'package:frosthub/services/auth_service.dart';
 
 // Helper to fix image URLs that may be partial or full URLs
 String fixImageUrl(String? url) {
   if (url == null || url.isEmpty) return '';
-  if (url.startsWith('http')) {
-    return url; // URL already complete
-  } else {
-    return 'http://frostcore.onrender.com$url'; // Prepend your backend base URL
-  }
+  if (url.startsWith('http')) return url;
+  return 'https://frostcore.onrender.com$url'; // use HTTPS
 }
 
 class DoubtScreen extends StatefulWidget {
@@ -33,24 +31,46 @@ class _DoubtScreenState extends State<DoubtScreen> {
   @override
   void initState() {
     super.initState();
+    _doubtsFuture = Future.value([]); // empty list until loaded
     _loadDoubts();
   }
 
-  void _loadDoubts() {
-    print('📦 groupId: ${widget.groupId}'); // your existing debug print
-    FrostCoreAPI.getDoubts(widget.groupId).then((doubts) {
-      for (var d in doubts) {
-        print('Image URL from API: ${fixImageUrl(d['imageUrl'])}');
+  void _loadDoubts() async {
+    String groupId = widget.groupId;
+
+    if (groupId.isEmpty) {
+      groupId = (await AuthService.getCurrentGroupId()) ?? '';
+      print('🧪 Fallback groupId: $groupId');
+    }
+
+    if (groupId.isEmpty) {
+      print('❌ No groupId found, cannot fetch doubts');
+      setState(() {
+        _doubtsFuture = Future.error('No group ID found');
+      });
+      return;
+    }
+
+    print('📦 Loading doubts for groupId: $groupId');
+
+    _doubtsFuture = FrostCoreAPI.getDoubts(groupId).then((doubts) {
+      final fixedDoubts = doubts.map((d) {
+        final map = Map<String, dynamic>.from(d);
+        return {
+          ...map,
+          'imageUrl': fixImageUrl(map['imageUrl']),
+          'answerImage': fixImageUrl(map['answerImage']),
+        };
+      }).toList();
+
+      for (var d in fixedDoubts) {
+        print('Fixed Image URL: ${d['imageUrl']}');
       }
-      setState(() {
-        _doubtsFuture =
-            Future.value(doubts); // wrap doubts in a Future for FutureBuilder
-      });
+
+      return fixedDoubts;
     }).catchError((e) {
-      print('Error fetching doubts: $e');
-      setState(() {
-        _doubtsFuture = Future.error(e);
-      });
+      print('❌ Error fetching doubts: $e');
+      throw e;
     });
   }
 

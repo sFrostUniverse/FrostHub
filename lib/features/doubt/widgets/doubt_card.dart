@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:frosthub/features/doubt/screens/doubt_detail_screen.dart';
 import 'package:frosthub/api/frostcore_api.dart';
+import 'package:frosthub/services/auth_service.dart';
 
-// Helper to fix image URLs that might be relative
+// Helper to fix image URLs
 String fixImageUrl(String? url) {
   if (url == null || url.isEmpty) return '';
-  if (url.startsWith('http')) {
-    return url;
-  } else {
-    return 'http://frostcore.onrender.com$url';
-  }
+  if (url.startsWith('http')) return url;
+  return 'https://frostcore.onrender.com$url';
 }
 
 class DoubtCard extends StatelessWidget {
   final Map<String, dynamic> doubt;
   final VoidCallback onAnswered;
-  final VoidCallback? onDeleted;
   final String currentUserId;
 
   const DoubtCard({
@@ -23,11 +19,9 @@ class DoubtCard extends StatelessWidget {
     required this.doubt,
     required this.onAnswered,
     required this.currentUserId,
-    this.onDeleted,
   });
 
-  // Confirm & delete dialog
-  void _confirmDelete(BuildContext context) async {
+  Future<void> _deleteDoubt(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -46,15 +40,29 @@ class DoubtCard extends StatelessWidget {
       ),
     );
 
-    if (confirm == true) {
-      try {
-        await FrostCoreAPI.deleteDoubt(doubt['_id']);
-        onDeleted?.call();
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting doubt: $e')),
-        );
-      }
+    if (confirm != true) return;
+
+    final token = await AuthService.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No auth token found')),
+      );
+      return;
+    }
+
+    try {
+      await FrostCoreAPI.deleteDoubt(
+        token: token,
+        doubtId: doubt['_id'],
+      );
+      onAnswered(); // Refresh the list after deletion
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Doubt deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting doubt: $e')),
+      );
     }
   }
 
@@ -62,32 +70,17 @@ class DoubtCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = doubt['title'] ?? 'No Title';
     final description = doubt['description'] ?? 'No Description';
-
     final author = doubt['userId']?['email'] ?? 'Unknown';
-
-    final timestamp = doubt['createdAt'];
-    String formattedDate = '';
-    if (timestamp != null && timestamp is String && timestamp.contains('T')) {
-      formattedDate = timestamp.split('T').first;
-    } else if (timestamp != null) {
-      formattedDate = timestamp.toString();
-    }
-
+    final timestamp = doubt['createdAt']?.toString() ?? '';
+    final formattedDate =
+        timestamp.contains('T') ? timestamp.split('T').first : timestamp;
     final imageUrl = fixImageUrl(doubt['imageUrl']);
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DoubtDetailScreen(
-              doubtId: doubt['_id'],
-              initialDoubt: doubt,
-            ),
-          ),
-        ).then((_) {
-          onAnswered();
-        });
+      onLongPress: () {
+        if (doubt['userId']?['_id'] == currentUserId) {
+          _deleteDoubt(context);
+        }
       },
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8),
@@ -96,33 +89,23 @@ class DoubtCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title + optional delete button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (doubt['userId']?['_id'] == currentUserId)
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(context),
-                    ),
-                ],
+              // Title
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
+              // Description
               Text(
                 description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
+              // Image if exists
               if (imageUrl.isNotEmpty)
                 Image.network(
                   imageUrl,
@@ -131,6 +114,7 @@ class DoubtCard extends StatelessWidget {
                   fit: BoxFit.cover,
                 ),
               const SizedBox(height: 12),
+              // Author and date
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

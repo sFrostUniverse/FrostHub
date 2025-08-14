@@ -382,12 +382,16 @@ class FrostCoreAPI {
     }
   }
 
-  static Future<void> deleteDoubt(String doubtId) async {
-    final url = Uri.parse('$baseUrl/api/doubts/$doubtId');
-    final response = await http.delete(url);
-
+  static Future<void> deleteDoubt({
+    required String token,
+    required String doubtId,
+  }) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/doubts/$doubtId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
     if (response.statusCode != 200) {
-      throw Exception('Failed to delete doubt');
+      throw Exception('Failed to delete doubt: ${response.body}');
     }
   }
 

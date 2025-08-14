@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frosthub/api/frostcore_api.dart';
@@ -48,19 +49,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
         _timetableFuture = _fetchTimetable();
       });
 
-      // Join group for live updates
       SocketService().joinGroup(groupId);
 
-      // 👂 Listen for live timetable updates
       SocketService().socket.on('timetable-updated', (_) {
         if (mounted) {
           setState(() {
-            _timetableFuture = _fetchTimetable(); // refresh UI
+            _timetableFuture = _fetchTimetable();
           });
         }
       });
     } catch (e) {
-      print('Error loading user: $e');
+      if (kDebugMode) debugPrint('Error loading user: $e');
     }
   }
 
@@ -81,12 +80,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
         allEntries.addAll(dayEntries);
       }
 
-      // ✅ Schedule reminders after fetching all timetable entries
       await NotificationService.scheduleClassReminders(allEntries);
 
       return allEntries;
     } catch (e) {
-      print('Error fetching timetable: $e');
+      if (kDebugMode) debugPrint('Error fetching timetable: $e');
       return [];
     }
   }
@@ -145,7 +143,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         ),
                         const SizedBox(height: 8),
                         ...classes.map((entry) {
-                          print('📚 Timetable Entry: $entry');
+                          if (kDebugMode)
+                            debugPrint('📚 Timetable Entry: $entry');
                           final subject =
                               entry['subject']?.toString() ?? 'Unknown';
                           final teacher = entry['teacher']?.toString() ?? '';

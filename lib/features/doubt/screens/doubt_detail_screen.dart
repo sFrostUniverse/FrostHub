@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:frosthub/api/frostcore_api.dart';
+import 'package:frosthub/services/auth_service.dart';
 import 'package:frosthub/features/doubt/widgets/answer_doubt_modal.dart';
-import 'package:frosthub/api/frostcore_api.dart'; // ✅ assuming this fetches a single doubt
 import 'package:frosthub/features/doubt/screens/image_preview_screen.dart';
 
 String fixImageUrl(String? url) {
   if (url == null || url.isEmpty) return '';
-  if (url.startsWith('http')) {
-    return url;
-  } else {
-    return 'http://frostcore.onrender.com$url';
-  }
+  if (url.startsWith('http')) return url;
+  return 'http://frostcore.onrender.com$url';
 }
 
 class DoubtDetailScreen extends StatefulWidget {
@@ -29,12 +27,19 @@ class DoubtDetailScreen extends StatefulWidget {
 class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
   late Map<String, dynamic> doubt;
   bool loading = false;
+  String? currentUserId;
 
   @override
   void initState() {
     super.initState();
     doubt = widget.initialDoubt;
+    _loadCurrentUser();
     _refreshDoubt();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    currentUserId = await AuthService.getUserId();
+    setState(() {});
   }
 
   Future<void> _refreshDoubt() async {
@@ -48,6 +53,43 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
     setState(() => loading = false);
   }
 
+  Future<void> _deleteDoubt() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Doubt?'),
+        content: const Text('Are you sure you want to delete this doubt?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final token = await AuthService.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No auth token found')));
+      return;
+    }
+
+    try {
+      await FrostCoreAPI.deleteDoubt(token: token, doubtId: widget.doubtId);
+      if (mounted) Navigator.pop(context); // go back after deletion
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error deleting doubt: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = doubt['title'] ?? 'No Title';
@@ -57,11 +99,17 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
     final timestamp = doubt['createdAt'] ?? '';
     final answer = doubt['answer'];
     final answerImage = fixImageUrl(doubt['answerImage']);
+    final ownerId = doubt['createdBy']?['_id'];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Doubt Details'),
         actions: [
+          if (currentUserId != null && currentUserId == ownerId)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _deleteDoubt,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshDoubt,
@@ -98,15 +146,12 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
                             width: double.infinity,
                             fit: BoxFit.cover),
                       ),
-
                     const SizedBox(height: 16),
                     Text(
                         'By $author on ${timestamp.toString().split("T").first}',
                         style:
                             const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 24),
-
-                    // ✅ Show answer if exists
                     if (answer != null && answer.isNotEmpty) ...[
                       const Divider(),
                       const Text('Answer:',
@@ -121,7 +166,6 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
                             width: double.infinity,
                             fit: BoxFit.cover),
                     ],
-
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -135,7 +179,7 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
                             builder: (_) =>
                                 AnswerDoubtModal(doubtId: widget.doubtId),
                           );
-                          _refreshDoubt(); // ✅ refresh after answering
+                          _refreshDoubt();
                         },
                       ),
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/services/auth_service.dart';
+import 'package:frosthub/features/doubt/screens/doubt_detail_screen.dart';
+import 'package:frosthub/api/frostcore_api.dart';
 
 class DoubtCard extends StatelessWidget {
   final Map<String, dynamic> doubt;
@@ -51,8 +52,8 @@ class DoubtCard extends StatelessWidget {
         token: token,
         doubtId: doubt['_id'],
       );
-      onDeleted?.call(); // optional callback
-      onAnswered(); // refresh list
+      onDeleted?.call();
+      onAnswered();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error deleting doubt: $e')),
@@ -60,11 +61,25 @@ class DoubtCard extends StatelessWidget {
     }
   }
 
+  /// Open full screen for answering/viewing
+  void _openDetailScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoubtDetailScreen(
+          doubtId: doubt['_id'],
+          initialDoubt: doubt,
+        ),
+      ),
+    ).then((_) => onAnswered()); // refresh list when returning
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = doubt['title'] ?? 'No Title';
     final description = doubt['description'] ?? 'No Description';
-
+    final imageUrl = doubt['imageUrl'] ?? '';
+    final answerImage = doubt['answerImage'] ?? '';
     final author = doubt['userId']?['email'] ?? 'Unknown';
     final timestamp = doubt['createdAt'] ?? '';
     final formattedDate = timestamp.toString().contains('T')
@@ -72,6 +87,7 @@ class DoubtCard extends StatelessWidget {
         : timestamp.toString();
 
     return GestureDetector(
+      onTap: () => _openDetailScreen(context),
       onLongPress: () {
         if (doubt['userId']?['_id'] == currentUserId) {
           _confirmAndDelete(context);
@@ -84,42 +100,28 @@ class DoubtCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title + optional delete button (for extra safety)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(
-                description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(description, maxLines: 2, overflow: TextOverflow.ellipsis),
+              if (imageUrl.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Image.network(imageUrl),
+              ],
+              if (answerImage.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Image.network(answerImage),
+              ],
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'By $author',
-                    style: const TextStyle(
-                      fontStyle: FontStyle.italic,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    formattedDate,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  Text('By $author',
+                      style: const TextStyle(
+                          fontStyle: FontStyle.italic, fontSize: 12)),
+                  Text(formattedDate,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
             ],

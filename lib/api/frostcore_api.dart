@@ -382,6 +382,15 @@ class FrostCoreAPI {
     }
   }
 
+  static Future<void> deleteDoubt(String doubtId) async {
+    final url = Uri.parse('$baseUrl/api/doubts/$doubtId');
+    final response = await http.delete(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete doubt');
+    }
+  }
+
   static Future<Map<String, dynamic>> getDoubtById(String doubtId) async {
     final headers = await getAuthHeaders();
     final response = await http.get(

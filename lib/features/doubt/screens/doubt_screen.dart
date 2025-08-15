@@ -3,6 +3,8 @@ import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
 import 'package:frosthub/features/doubt/widgets/doubt_card.dart';
 import 'package:frosthub/services/auth_service.dart';
+import 'package:frosthub/providers/notification_provider.dart';
+import 'package:provider/provider.dart';
 
 // Helper to fix image URLs
 String fixImageUrl(String? url) {
@@ -28,6 +30,15 @@ class _DoubtScreenState extends State<DoubtScreen> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Reset badge when entering
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<NotificationProvider>(context, listen: false)
+            .markAsSeen(widget.groupId);
+      }
+    });
+
     _doubtsFuture = Future.value([]);
     _loadCurrentUser();
     _refreshDoubts();
@@ -88,7 +99,8 @@ class _DoubtScreenState extends State<DoubtScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(
-                child: Text('Error loading doubts: ${snapshot.error}'));
+              child: Text('Error loading doubts: ${snapshot.error}'),
+            );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No doubts yet.'));
           }
@@ -104,7 +116,7 @@ class _DoubtScreenState extends State<DoubtScreen> {
                 final doubt = doubts[index];
                 return DoubtCard(
                   doubt: doubt,
-                  onAnswered: _refreshDoubts, // refresh after any answer
+                  onAnswered: _refreshDoubts,
                   currentUserId: _currentUserId ?? '',
                 );
               },

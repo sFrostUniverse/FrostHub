@@ -5,6 +5,7 @@ import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/features/timetable/presentation/widgets/add_timetable_modal.dart';
 import 'package:frosthub/services/notification_service.dart';
 import 'package:frosthub/services/socket_service.dart';
+import 'package:intl/intl.dart'; // ✅ For time formatting
 
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
@@ -17,6 +18,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   String? _groupId;
   String? _role;
   late Future<List<Map<String, dynamic>>> _timetableFuture;
+  bool _use24HourFormat = false; // ✅ New state for time format preference
 
   final List<String> days = [
     'Monday',
@@ -35,6 +37,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   Future<void> _initialize() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // ✅ Load time format preference
+    _use24HourFormat = prefs.getBool('use24HourFormat') ?? false;
+
     final token = prefs.getString('token');
     if (token == null) return;
 
@@ -86,6 +92,17 @@ class _TimetableScreenState extends State<TimetableScreen> {
     } catch (e) {
       if (kDebugMode) debugPrint('Error fetching timetable: $e');
       return [];
+    }
+  }
+
+  // ✅ Helper to format time based on user preference
+  String _formatTime(String timeString) {
+    try {
+      // Assuming stored time is in "HH:mm" format
+      final time = DateFormat('HH:mm').parse(timeString);
+      return DateFormat(_use24HourFormat ? 'HH:mm' : 'hh:mm a').format(time);
+    } catch (_) {
+      return timeString; // fallback if parsing fails
     }
   }
 
@@ -143,12 +160,14 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         ),
                         const SizedBox(height: 8),
                         ...classes.map((entry) {
-                          if (kDebugMode)
+                          if (kDebugMode) {
                             debugPrint('📚 Timetable Entry: $entry');
+                          }
                           final subject =
                               entry['subject']?.toString() ?? 'Unknown';
                           final teacher = entry['teacher']?.toString() ?? '';
-                          final time = entry['time']?.toString() ?? '';
+                          final time =
+                              _formatTime(entry['time']?.toString() ?? '');
 
                           return Card(
                             child: Padding(
@@ -156,9 +175,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(subject,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
+                                  Text(
+                                    subject,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                   Text(time),
                                   Text(teacher),
                                 ],

@@ -38,9 +38,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Fetch new doubts after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final groupId = await AuthService.getCurrentGroupId();
+      if (groupId != null && context.mounted) {
+        await Provider.of<NotificationProvider>(context, listen: false)
+            .fetchNewDoubts(groupId);
+      }
+    });
+
+    // Load dashboard data
     _loadData();
 
-    // 🔁 Rebuild every minute to keep class status accurate
+    // Rebuild every minute for class status
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });

@@ -464,12 +464,11 @@ class FrostCoreAPI {
 
   static Future<int> getNewDoubtsCount({required String groupId}) async {
     try {
-      final token = await AuthService
-          .getToken(); // Make sure you have a method to get auth token
+      final token = await AuthService.getToken();
       if (token == null) return 0;
 
       final response = await http.get(
-        Uri.parse('$baseUrl/doubts/count?groupId=$groupId&checked=false'),
+        Uri.parse('$baseUrl/api/doubts/count/$groupId'), // use path param
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

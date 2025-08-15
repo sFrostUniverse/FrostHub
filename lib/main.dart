@@ -18,9 +18,10 @@ import 'features/announcements/presentation/screens/announcements_screen.dart';
 import 'features/notes/presentation/screens/notes_folder_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/settings/presentation/screens/about_screen.dart';
-
+import 'package:frosthub/providers/settings_provider.dart';
 // ✅ Add NotificationProvider import
 import 'providers/notification_provider.dart';
+import 'package:frosthub/theme/time_format_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,8 @@ class FrostHubApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(
             create: (_) => NotificationProvider()), // ✅ Added
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => TimeFormatProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

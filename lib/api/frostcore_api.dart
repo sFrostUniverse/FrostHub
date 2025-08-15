@@ -462,6 +462,33 @@ class FrostCoreAPI {
     }
   }
 
+  static Future<int> getNewDoubtsCount({required String groupId}) async {
+    try {
+      final token = await AuthService
+          .getToken(); // Make sure you have a method to get auth token
+      if (token == null) return 0;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/doubts/count?groupId=$groupId&checked=false'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['count'] ?? 0;
+      } else {
+        print('Error fetching new doubts count: ${response.statusCode}');
+        return 0;
+      }
+    } catch (e) {
+      print('Exception fetching new doubts count: $e');
+      return 0;
+    }
+  }
+
 // 🔹 Get Upcoming Announcements
   static Future<List<Map<String, dynamic>>> getUpcomingAnnouncements({
     required String token,

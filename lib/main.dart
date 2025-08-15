@@ -19,7 +19,8 @@ import 'features/notes/presentation/screens/notes_folder_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/settings/presentation/screens/about_screen.dart';
 
-// ✅ Test login page
+// ✅ Add NotificationProvider import
+import 'providers/notification_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,8 +48,12 @@ class FrostHubApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+            create: (_) => NotificationProvider()), // ✅ Added
+      ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
@@ -57,7 +62,7 @@ class FrostHubApp extends StatelessWidget {
             darkTheme: ThemeData.dark(),
             themeMode: themeProvider.themeMode,
 
-            // 🔹 Change home to TestLoginPage temporarily
+            // 🔹 Change home to SplashScreen
             home: const SplashScreen(),
 
             routes: {

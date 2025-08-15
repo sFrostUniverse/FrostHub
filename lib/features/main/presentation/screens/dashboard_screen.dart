@@ -14,6 +14,8 @@ import 'dart:async';
 import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
 import 'package:frosthub/services/auth_service.dart';
 import 'package:frosthub/features/doubt/screens/doubt_screen.dart';
+import 'package:frosthub/providers/notification_provider.dart';
+import 'package:provider/provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -246,7 +248,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('FrostHub Dashboard')),
+      appBar: AppBar(
+        title: const Text('FrostHub Dashboard'),
+        actions: [
+          // 🔔 Notification Bell
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () async {
+                  // Navigate to Doubts screen
+                  final groupId = await AuthService.getCurrentGroupId();
+                  if (groupId != null && context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DoubtScreen(groupId: groupId),
+                      ),
+                    );
+                  }
+                },
+              ),
+              // Badge for new doubts
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Consumer<NotificationProvider>(
+                  builder: (_, provider, __) {
+                    return provider.newDoubtsCount > 0
+                        ? Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              provider.newDoubtsCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       drawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: _loadData, // 🔁 Pull-to-refresh calls this

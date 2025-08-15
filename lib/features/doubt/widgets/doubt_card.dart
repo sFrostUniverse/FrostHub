@@ -3,6 +3,12 @@ import 'package:frosthub/services/auth_service.dart';
 import 'package:frosthub/features/doubt/screens/doubt_detail_screen.dart';
 import 'package:frosthub/api/frostcore_api.dart';
 
+String fixImageUrl(String? url) {
+  if (url == null || url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  return 'https://frostcore.onrender.com$url'; // HTTPS
+}
+
 class DoubtCard extends StatelessWidget {
   final Map<String, dynamic> doubt;
   final VoidCallback onAnswered;
@@ -17,7 +23,6 @@ class DoubtCard extends StatelessWidget {
     this.onDeleted,
   });
 
-  /// Confirm & delete the doubt
   Future<void> _confirmAndDelete(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -40,28 +45,18 @@ class DoubtCard extends StatelessWidget {
     if (confirm != true) return;
 
     final token = await AuthService.getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No auth token found')),
-      );
-      return;
-    }
+    if (token == null) return;
 
     try {
-      await FrostCoreAPI.deleteDoubt(
-        token: token,
-        doubtId: doubt['_id'],
-      );
+      await FrostCoreAPI.deleteDoubt(token: token, doubtId: doubt['_id']);
       onDeleted?.call();
       onAnswered();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting doubt: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error deleting doubt: $e')));
     }
   }
 
-  /// Open full screen for answering/viewing
   void _openDetailScreen(BuildContext context) {
     Navigator.push(
       context,
@@ -71,20 +66,21 @@ class DoubtCard extends StatelessWidget {
           initialDoubt: doubt,
         ),
       ),
-    ).then((_) => onAnswered()); // refresh list when returning
+    ).then((_) => onAnswered());
   }
 
   @override
   Widget build(BuildContext context) {
     final title = doubt['title'] ?? 'No Title';
     final description = doubt['description'] ?? 'No Description';
-    final imageUrl = doubt['imageUrl'] ?? '';
-    final answerImage = doubt['answerImage'] ?? '';
+    final imageUrl = fixImageUrl(doubt['imageUrl']);
     final author = doubt['userId']?['email'] ?? 'Unknown';
     final timestamp = doubt['createdAt'] ?? '';
     final formattedDate = timestamp.toString().contains('T')
         ? timestamp.split('T').first
         : timestamp.toString();
+    final answers = doubt['answers'] ?? [];
+    final isAnswered = answers.isNotEmpty;
 
     return GestureDetector(
       onTap: () => _openDetailScreen(context),
@@ -105,18 +101,26 @@ class DoubtCard extends StatelessWidget {
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(description, maxLines: 2, overflow: TextOverflow.ellipsis),
-              if (imageUrl.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Image.network(imageUrl),
-              ],
-              if (answerImage.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Image.network(answerImage),
-              ],
+              const SizedBox(height: 12),
+              if (imageUrl.isNotEmpty)
+                Image.network(imageUrl,
+                    height: 150, width: double.infinity, fit: BoxFit.cover),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isAnswered ? Colors.green : Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isAnswered ? 'Answered' : 'Not Answered',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
                   Text('By $author',
                       style: const TextStyle(
                           fontStyle: FontStyle.italic, fontSize: 12)),

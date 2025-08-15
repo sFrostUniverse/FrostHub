@@ -1,13 +1,14 @@
+import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:frosthub/api/frostcore_api.dart';
 import 'package:frosthub/services/auth_service.dart';
-import 'package:frosthub/features/doubt/widgets/answer_doubt_modal.dart';
 import 'package:frosthub/features/doubt/screens/image_preview_screen.dart';
+import 'package:frosthub/features/doubt/widgets/answer_doubt_modal.dart';
 
 String fixImageUrl(String? url) {
   if (url == null || url.isEmpty) return '';
   if (url.startsWith('http')) return url;
-  return 'http://frostcore.onrender.com$url';
+  return 'https://frostcore.onrender.com$url'; // HTTPS
 }
 
 class DoubtDetailScreen extends StatefulWidget {
@@ -75,19 +76,57 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
     if (confirm != true) return;
 
     final token = await AuthService.getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No auth token found')));
-      return;
-    }
+    if (token == null) return;
 
     try {
       await FrostCoreAPI.deleteDoubt(token: token, doubtId: widget.doubtId);
-      if (mounted) Navigator.pop(context); // go back after deletion
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error deleting doubt: $e')));
     }
+  }
+
+  Future<void> _deleteAnswer(String answerId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Answer?'),
+        content: const Text('Are you sure you want to delete this answer?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final token = await AuthService.getToken();
+    if (token == null) return;
+
+    try {
+      await FrostCoreAPI.deleteAnswer(token: token, answerId: answerId);
+      _refreshDoubt();
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error deleting answer: $e')));
+    }
+  }
+
+  Future<void> _addAnswer() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AnswerDoubtModal(doubtId: widget.doubtId),
+    );
+    _refreshDoubt();
   }
 
   @override
@@ -97,23 +136,17 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
     final imageUrl = fixImageUrl(doubt['imageUrl']);
     final author = doubt['createdBy']?['username'] ?? 'Unknown';
     final timestamp = doubt['createdAt'] ?? '';
-    final answer = doubt['answer'];
-    final answerImage = fixImageUrl(doubt['answerImage']);
     final ownerId = doubt['createdBy']?['_id'];
+
+    final answers = doubt['answers'] ?? [];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Doubt Details'),
         actions: [
           if (currentUserId != null && currentUserId == ownerId)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteDoubt,
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshDoubt,
-          ),
+            IconButton(icon: const Icon(Icons.delete), onPressed: _deleteDoubt),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshDoubt),
         ],
       ),
       body: loading
@@ -152,41 +185,77 @@ class _DoubtDetailScreenState extends State<DoubtDetailScreen> {
                         style:
                             const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 24),
-                    if (answer != null && answer.isNotEmpty) ...[
-                      const Divider(),
-                      const Text('Answer:',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Text(answer),
-                      const SizedBox(height: 12),
-                      if (answerImage.isNotEmpty)
-                        Image.network(answerImage,
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.reply),
-                        label: const Text('Answer This Doubt'),
-                        onPressed: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (_) =>
-                                AnswerDoubtModal(doubtId: widget.doubtId),
-                          );
-                          _refreshDoubt();
-                        },
-                      ),
-                    ),
+                    const Text('Answers',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    if (answers.isEmpty)
+                      const Text('No answers yet.',
+                          style: TextStyle(color: Colors.red)),
+                    ...answers.map<Widget>((a) {
+                      final answerText = a['text'] ?? '';
+                      final answerImage = fixImageUrl(a['imageUrl']);
+                      final answerAuthor =
+                          a['createdBy']?['username'] ?? 'Unknown';
+                      final answerOwnerId = a['createdBy']?['_id'];
+                      final answerId = a['_id'];
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(answerText),
+                              if (answerImage.isNotEmpty)
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ImagePreviewScreen(
+                                            imageUrl: answerImage),
+                                      ),
+                                    );
+                                  },
+                                  child: Image.network(answerImage,
+                                      height: 150,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover),
+                                ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('By $answerAuthor',
+                                      style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 12)),
+                                  if (currentUserId != null &&
+                                      currentUserId == answerOwnerId)
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red),
+                                      onPressed: () => _deleteAnswer(answerId),
+                                    ),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               ),
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addAnswer,
+        icon: const Icon(Icons.reply),
+        label: const Text('Answer Doubt'),
+      ),
     );
   }
 }

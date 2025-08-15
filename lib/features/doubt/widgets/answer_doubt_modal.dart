@@ -33,20 +33,22 @@ class _AnswerDoubtModalState extends State<AnswerDoubtModal> {
   }
 
   Future<void> _submitAnswer() async {
-    if (_answerController.text.trim().isEmpty) return;
+    final text = _answerController.text.trim();
+    if (text.isEmpty) return;
 
     setState(() => _isSubmitting = true);
 
-    final success = await FrostCoreAPI.answerDoubt(
+    // Call new backend API to add answer to the answers array
+    final success = await FrostCoreAPI.addAnswerToDoubt(
       widget.doubtId,
-      _answerController.text.trim(),
+      text,
       imageFile: _selectedImage,
     );
 
     setState(() => _isSubmitting = false);
 
     if (success && mounted) {
-      Navigator.of(context).pop(true); // return success to parent
+      Navigator.of(context).pop(true); // Return success to parent
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to submit answer')),

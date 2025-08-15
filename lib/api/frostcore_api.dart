@@ -395,6 +395,25 @@ class FrostCoreAPI {
     }
   }
 
+  static Future<void> deleteAnswer({
+    required String token,
+    required String answerId,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/answers/$answerId');
+
+    final response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete answer: ${response.body}');
+    }
+  }
+
   static Future<Map<String, dynamic>> getDoubtById(String doubtId) async {
     final headers = await getAuthHeaders();
     final response = await http.get(
@@ -406,6 +425,40 @@ class FrostCoreAPI {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to fetch doubt: ${response.statusCode}');
+    }
+  }
+
+  static Future<bool> addAnswerToDoubt(
+    String doubtId,
+    String answerText, {
+    XFile? imageFile,
+  }) async {
+    try {
+      var uri = Uri.parse('$baseUrl/api/doubts/$doubtId/add-answer');
+      var request = http.MultipartRequest('POST', uri);
+
+      request.fields['text'] = answerText;
+
+      if (imageFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          filename: imageFile.name,
+        ));
+      }
+
+      final token = await AuthService.getToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error adding answer: $e');
+      return false;
     }
   }
 

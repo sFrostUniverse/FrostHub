@@ -4,22 +4,18 @@ import 'package:frosthub/features/doubt/widgets/ask_doubt_modal.dart';
 import 'package:frosthub/features/doubt/widgets/doubt_card.dart';
 import 'package:frosthub/services/auth_service.dart';
 
-// Helper to fix image URLs that may be partial or full URLs
+// Helper to fix image URLs
 String fixImageUrl(String? url) {
   if (url == null || url.isEmpty) return '';
   if (url.startsWith('http')) return url;
-  return 'https://frostcore.onrender.com$url'; // use HTTPS
+  return 'https://frostcore.onrender.com$url';
 }
 
 class DoubtScreen extends StatefulWidget {
   final String groupId;
   final VoidCallback? onAnswered;
 
-  const DoubtScreen({
-    super.key,
-    required this.groupId,
-    this.onAnswered,
-  });
+  const DoubtScreen({super.key, required this.groupId, this.onAnswered});
 
   @override
   State<DoubtScreen> createState() => _DoubtScreenState();
@@ -32,58 +28,45 @@ class _DoubtScreenState extends State<DoubtScreen> {
   @override
   void initState() {
     super.initState();
-    _doubtsFuture = Future.value([]); // empty list until loaded
+    _doubtsFuture = Future.value([]);
     _loadCurrentUser();
-    _loadDoubts();
+    _refreshDoubts();
   }
 
   Future<void> _loadCurrentUser() async {
     _currentUserId = await AuthService.getUserId();
-    setState(() {}); // refresh UI to update delete permissions
-  }
-
-  void _loadDoubts() async {
-    String groupId = widget.groupId;
-
-    if (groupId.isEmpty) {
-      groupId = (await AuthService.getCurrentGroupId()) ?? '';
-      print('🧪 Fallback groupId: $groupId');
-    }
-
-    if (groupId.isEmpty) {
-      print('❌ No groupId found, cannot fetch doubts');
-      setState(() {
-        _doubtsFuture = Future.error('No group ID found');
-      });
-      return;
-    }
-
-    print('📦 Loading doubts for groupId: $groupId');
-
-    _doubtsFuture = FrostCoreAPI.getDoubts(groupId).then((doubts) {
-      final fixedDoubts = doubts.map((d) {
-        final map = Map<String, dynamic>.from(d);
-        return {
-          ...map,
-          'imageUrl': fixImageUrl(map['imageUrl']),
-          'answerImage': fixImageUrl(map['answerImage']),
-        };
-      }).toList();
-
-      for (var d in fixedDoubts) {
-        print('Fixed Image URL: ${d['imageUrl']}');
-      }
-
-      return fixedDoubts;
-    }).catchError((e) {
-      print('❌ Error fetching doubts: $e');
-      throw e;
-    });
+    setState(() {});
   }
 
   Future<void> _refreshDoubts() async {
-    _loadDoubts();
-    setState(() {}); // refresh UI after reload
+    try {
+      String groupId = widget.groupId;
+      if (groupId.isEmpty) {
+        groupId = (await AuthService.getCurrentGroupId()) ?? '';
+      }
+
+      if (groupId.isEmpty) {
+        setState(() {
+          _doubtsFuture = Future.error('No group ID found');
+        });
+        return;
+      }
+
+      final future = FrostCoreAPI.getDoubts(groupId).then((doubts) {
+        return doubts.map((d) {
+          final map = Map<String, dynamic>.from(d);
+          return {...map, 'imageUrl': fixImageUrl(map['imageUrl'])};
+        }).toList();
+      });
+
+      setState(() {
+        _doubtsFuture = future;
+      });
+    } catch (e) {
+      setState(() {
+        _doubtsFuture = Future.error(e);
+      });
+    }
   }
 
   void _openAskDoubtModal() {
@@ -97,16 +80,15 @@ class _DoubtScreenState extends State<DoubtScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Doubts'),
-      ),
+      appBar: AppBar(title: const Text('Doubts')),
       body: FutureBuilder<List<dynamic>>(
         future: _doubtsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return const Center(child: Text('Error loading doubts'));
+            return Center(
+                child: Text('Error loading doubts: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No doubts yet.'));
           }
@@ -122,7 +104,7 @@ class _DoubtScreenState extends State<DoubtScreen> {
                 final doubt = doubts[index];
                 return DoubtCard(
                   doubt: doubt,
-                  onAnswered: _refreshDoubts,
+                  onAnswered: _refreshDoubts, // refresh after any answer
                   currentUserId: _currentUserId ?? '',
                 );
               },

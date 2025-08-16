@@ -399,7 +399,7 @@ class FrostCoreAPI {
     required String token,
     required String answerId,
   }) async {
-    final url = Uri.parse('$baseUrl/api/answers/$answerId');
+    final url = Uri.parse('$baseUrl/api/doubts/answers/$answerId');
 
     final response = await http.delete(
       url,

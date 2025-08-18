@@ -6,19 +6,6 @@ class AuthService {
   static Future<String?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString('userId');
-
-    if (userId == null) {
-      final userJson = prefs.getString('user');
-      if (userJson != null) {
-        try {
-          final user = jsonDecode(userJson);
-          userId = user['_id'] ?? user['id'];
-          if (userId != null) await prefs.setString('userId', userId);
-        } catch (e) {
-          print('❌ Failed to extract userId: $e');
-        }
-      }
-    }
     print('🔍 Final userId: $userId');
     return userId;
   }

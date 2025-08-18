@@ -345,27 +345,27 @@ class FrostCoreAPI {
     request.headers['Authorization'] = 'Bearer $token';
 
     if (imageFile != null) {
-      String? mimeType;
-
       if (kIsWeb) {
         final bytes = await imageFile.readAsBytes();
-        mimeType = lookupMimeType(imageFile.name, headerBytes: bytes);
+        final mimeType = lookupMimeType(imageFile.name, headerBytes: bytes) ??
+            'application/octet-stream';
         request.files.add(http.MultipartFile.fromBytes(
           'image',
           bytes,
           filename: imageFile.name,
-          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+          contentType: MediaType.parse(mimeType),
         ));
+        debugPrint("📦 Attaching image (web) with MIME: $mimeType");
       } else {
-        mimeType = lookupMimeType(imageFile.path);
+        final mimeType =
+            lookupMimeType(imageFile.path) ?? 'application/octet-stream';
         request.files.add(await http.MultipartFile.fromPath(
           'image',
           imageFile.path,
-          contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+          contentType: MediaType.parse(mimeType),
         ));
+        debugPrint("📦 Attaching image (native) with MIME: $mimeType");
       }
-
-      debugPrint("📦 Attaching image with MIME: $mimeType");
     }
 
     try {

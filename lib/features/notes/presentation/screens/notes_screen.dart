@@ -30,8 +30,9 @@ class _NotesScreenState extends State<NotesScreen> {
     final user = await AuthService.getUser();
     print('🔍 User data in _loadNotes(): $user');
 
-    // Try to get groupId from user, fallback to AuthService
+    // Try to get groupId from user
     String? groupId = user?['groupId'];
+
     if (groupId == null || groupId.isEmpty) {
       groupId = await AuthService.getCurrentGroupId();
       print('🧪 Fallback groupId for notes: $groupId');
